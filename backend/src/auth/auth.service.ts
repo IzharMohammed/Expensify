@@ -136,7 +136,8 @@ export class AuthService {
 
   private async issueTokens(user: User) {
     const authUser = this.toAuthUser(user);
-    const accessToken = await this.jwtService.signAsync(authUser, {
+    const jwtPayload = this.toJwtPayload(user);
+    const accessToken = await this.jwtService.signAsync(jwtPayload, {
       secret: this.configService.getOrThrow<string>('JWT_SECRET'),
       expiresIn: ACCESS_TOKEN_TTL_SECONDS,
       subject: user.id,
@@ -193,10 +194,18 @@ export class AuthService {
       .where(eq(refreshTokens.id, tokenId));
   }
 
-  private toAuthUser(user: User): AuthUser & JwtPayload {
+  private toAuthUser(user: User): AuthUser {
     return {
       id: user.id,
-      sub: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl ?? null,
+      authProvider: user.authProvider,
+    };
+  }
+
+  private toJwtPayload(user: User): Omit<JwtPayload, 'sub'> {
+    return {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl ?? null,
