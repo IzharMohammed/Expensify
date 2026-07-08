@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { and, desc, eq, param } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { CategoriesService } from '../categories/categories.service';
 import { DrizzleService } from '../database/drizzle.service';
 import { expenses } from '../database/schema';
@@ -24,13 +24,11 @@ export class ExpensesService {
       categoryNames: categories.map((category) => category.name),
       todayIsoDate: this.todayIso(),
     });
-console.log("parsed",parsed);
 
     const matchedCategory = parsed.category
       ? await this.categoriesService.findByNameForUser(userId, parsed.category)
       : null;
-    console.log("matchedCategory",matchedCategory);
-    
+
     return {
       preview: {
         merchant: parsed.merchant ?? 'Unknown merchant',

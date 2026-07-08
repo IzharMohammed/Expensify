@@ -95,9 +95,20 @@ export function useAuth() {
 
 export function getApiErrorMessage(error: unknown) {
   if (error instanceof AxiosError) {
-    return (
-      (error.response?.data as { message?: string })?.message ?? 'Authentication request failed'
-    );
+    const message = (error.response?.data as { message?: unknown })?.message;
+    if (typeof message === 'string') {
+      return message;
+    }
+
+    if (Array.isArray(message)) {
+      return message.join(', ');
+    }
+
+    if (message && typeof message === 'object') {
+      return JSON.stringify(message);
+    }
+
+    return 'Authentication request failed';
   }
 
   return 'Authentication request failed';

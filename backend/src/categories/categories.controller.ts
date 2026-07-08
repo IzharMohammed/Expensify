@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -19,8 +19,10 @@ export class CategoriesController {
   }
 
   @Post()
-  @UsePipes(new ZodValidationPipe(createCategorySchema))
-  async create(@CurrentUser() user: JwtPayload, @Body() body: CreateCategoryDto) {
+  async create(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(createCategorySchema)) body: CreateCategoryDto,
+  ) {
     return {
       category: await this.categoriesService.create(user.sub, body),
     };

@@ -20,9 +20,6 @@ export class GroqService {
     categoryNames: string[];
     todayIsoDate: string;
   }): Promise<ParsedExpenseDraft> {
-    console.log("params.categoryNames",params.categoryNames);
-    console.log("params.todayIsoDate",params.todayIsoDate);
-    
     const systemPrompt = buildExpenseParserPrompt({
       categoryNames: params.categoryNames,
       todayIsoDate: params.todayIsoDate,
@@ -40,7 +37,6 @@ export class GroqService {
         ],
       },
     });
-    console.log("response",response);
     return response;
   }
 

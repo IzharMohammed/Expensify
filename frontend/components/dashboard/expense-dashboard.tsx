@@ -70,7 +70,6 @@ export function ExpenseDashboard() {
 
     setState((current) => ({ ...current, status: 'parsing', error: null }));
     try {
-      console.log("text",state.entryText);
       
       const response = await api.post('/expenses/parse', {
         text: state.entryText.trim(),
@@ -540,6 +539,14 @@ function getError(error: unknown, fallback: string) {
 
   if (Array.isArray(message)) {
     return message.join(', ');
+  }
+
+  if (message && typeof message === 'object') {
+    try {
+      return JSON.stringify(message);
+    } catch {
+      return fallback;
+    }
   }
 
   return message ?? fallback;

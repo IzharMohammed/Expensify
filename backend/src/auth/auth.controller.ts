@@ -7,7 +7,6 @@ import {
   Res,
   UnauthorizedException,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
@@ -43,8 +42,10 @@ export class AuthController {
   ) {}
 
   @Post('register')
-  @UsePipes(new ZodValidationPipe(registerSchema))
-  async register(@Body() body: RegisterDto, @Res({ passthrough: true }) res: Response) {
+  async register(
+    @Body(new ZodValidationPipe(registerSchema)) body: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.register(body);
     this.setRefreshCookie(res, result.refreshToken);
 
@@ -57,8 +58,10 @@ export class AuthController {
 
   @Post('login')
   @Throttle({ default: { ttl: 15 * 60 * 1000, limit: 5 } })
-  @UsePipes(new ZodValidationPipe(loginSchema))
-  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body(new ZodValidationPipe(loginSchema)) body: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(body);
     this.setRefreshCookie(res, result.refreshToken);
 
@@ -70,10 +73,9 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @UsePipes(new ZodValidationPipe(refreshSchema))
   async refresh(
     @Req() req: Request,
-    @Body() body: RefreshDto,
+    @Body(new ZodValidationPipe(refreshSchema)) body: RefreshDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = this.extractRefreshToken(req, body.refreshToken);
@@ -88,10 +90,9 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UsePipes(new ZodValidationPipe(logoutSchema))
   async logout(
     @Req() req: Request,
-    @Body() body: LogoutDto,
+    @Body(new ZodValidationPipe(logoutSchema)) body: LogoutDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = this.extractRefreshToken(req, body.refreshToken, false);

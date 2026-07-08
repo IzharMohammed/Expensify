@@ -6,7 +6,6 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  UsePipes,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -24,16 +23,18 @@ export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
   @Post('parse')
-  @UsePipes(new ZodValidationPipe(parseExpenseSchema))
-  async parse(@CurrentUser() user: JwtPayload, @Body() body: ParseExpenseDto) {
-    console.log("calling this endpoint");
-    
+  async parse(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(parseExpenseSchema)) body: ParseExpenseDto,
+  ) {
     return this.expensesService.parseText(user.sub, body.text);
   }
 
   @Post()
-  @UsePipes(new ZodValidationPipe(createExpenseSchema))
-  async create(@CurrentUser() user: JwtPayload, @Body() body: CreateExpenseDto) {
+  async create(
+    @CurrentUser() user: JwtPayload,
+    @Body(new ZodValidationPipe(createExpenseSchema)) body: CreateExpenseDto,
+  ) {
     return this.expensesService.createExpense(user.sub, body);
   }
 
