@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
+import { BudgetsModule } from './budgets/budgets.module';
 import { CategoriesModule } from './categories/categories.module';
 import { DrizzleModule } from './database/drizzle.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
@@ -21,6 +23,8 @@ import { ExpensesModule } from './expenses/expenses.module';
     DrizzleModule,
     AuthModule,
     CategoriesModule,
+    BudgetsModule,
+    DashboardModule,
     ExpensesModule,
   ],
 })

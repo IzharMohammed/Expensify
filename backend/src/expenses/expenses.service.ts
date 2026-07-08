@@ -1,8 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { desc, eq } from 'drizzle-orm';
+import { BudgetsService } from '../budgets/budgets.service';
 import { CategoriesService } from '../categories/categories.service';
 import { DrizzleService } from '../database/drizzle.service';
 import { expenses } from '../database/schema';
+import { DashboardEventsService } from '../dashboard/dashboard-events.service';
+import { DashboardService } from '../dashboard/dashboard.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { GroqService } from './groq.service';
@@ -13,6 +16,9 @@ export class ExpensesService {
   constructor(
     private readonly drizzle: DrizzleService,
     private readonly categoriesService: CategoriesService,
+    private readonly budgetsService: BudgetsService,
+    private readonly dashboardService: DashboardService,
+    private readonly dashboardEventsService: DashboardEventsService,
     private readonly groqService: GroqService,
     private readonly storageService: StorageService,
   ) {}
@@ -72,6 +78,25 @@ export class ExpensesService {
         receiptUrl: dto.receiptUrl ?? null,
       })
       .returning();
+
+    const summary = await this.dashboardService.getSummary(userId);
+    await this.dashboardEventsService.publish(userId, {
+      type: 'summary',
+      data: summary,
+    });
+
+    const alert = await this.budgetsService.getBudgetAlertForExpense(
+      userId,
+      expense.categoryId,
+      new Date(expense.date),
+    );
+
+    if (alert) {
+      await this.dashboardEventsService.publish(userId, {
+        type: 'budget_alert',
+        data: alert,
+      });
+    }
 
     return { expense };
   }
