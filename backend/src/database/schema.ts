@@ -1,5 +1,7 @@
 import {
   boolean,
+  index,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -8,6 +10,8 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const authProviderEnum = pgEnum('auth_provider', ['local', 'google']);
+export const paymentMethodEnum = pgEnum('payment_method', ['upi', 'card', 'cash', 'netbanking']);
+export const expenseSourceEnum = pgEnum('expense_source', ['text', 'voice', 'ocr', 'manual']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -30,6 +34,50 @@ export const refreshTokens = pgTable('refresh_tokens', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const categories = pgTable(
+  'categories',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    icon: text('icon').notNull(),
+    color: text('color').notNull(),
+    isDefault: boolean('is_default').notNull().default(false),
+  },
+  (table) => ({
+    categoriesUserIdIdx: index('categories_user_id_idx').on(table.userId),
+  }),
+);
+
+export const expenses = pgTable(
+  'expenses',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+    merchant: text('merchant').notNull(),
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
+    paymentMethod: paymentMethodEnum('payment_method'),
+    date: timestamp('date', { withTimezone: true }).notNull(),
+    note: text('note'),
+    source: expenseSourceEnum('source').notNull().default('manual'),
+    rawInput: text('raw_input'),
+    receiptUrl: text('receipt_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    expensesUserIdIdx: index('expenses_user_id_idx').on(table.userId),
+    expensesCategoryIdIdx: index('expenses_category_id_idx').on(table.categoryId),
+    expensesDateIdx: index('expenses_date_idx').on(table.date),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
+export type Category = typeof categories.$inferSelect;
+export type NewCategory = typeof categories.$inferInsert;
+export type Expense = typeof expenses.$inferSelect;
+export type NewExpense = typeof expenses.$inferInsert;
