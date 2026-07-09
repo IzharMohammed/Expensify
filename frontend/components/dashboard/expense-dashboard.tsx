@@ -1,13 +1,19 @@
 'use client';
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Mic, Paperclip, LoaderCircle } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
+import { BudgetAlertToast } from '@/components/dashboard/budget-alert-toast';
+import { DashboardNav } from '@/components/dashboard/dashboard-nav';
+import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/text-area';
 import { api } from '@/lib/api';
+import { DASHBOARD_STREAM_URL } from '@/lib/config';
+import { BudgetAlert, DashboardSummary } from '@/lib/dashboard-types';
 import { Category, ExpensePreview, ExpenseRecord } from '@/lib/expense-types';
 
 import { CategoryPicker } from '../expenses/category-picker';
@@ -19,13 +25,14 @@ type DashboardState = {
   entryText: string;
   status: '' | 'parsing' | 'saving' | 'recording' | 'transcribing' | 'scanning';
   error: string | null;
+  summary: DashboardSummary | null;
 };
 
 const DEFAULT_ICONS = ['Wallet', 'Tag', 'CircleDollarSign', 'BadgeIndianRupee'];
 const DEFAULT_COLORS = ['#2563EB', '#16A34A', '#D97706', '#7C3AED', '#DB2777'];
 
 export function ExpenseDashboard() {
-  const { logout, user } = useAuth();
+  const { accessToken, logout, user } = useAuth();
   const [state, setState] = useState<DashboardState>({
     categories: [],
     expenses: [],
@@ -33,7 +40,9 @@ export function ExpenseDashboard() {
     entryText: '',
     status: '',
     error: null,
+    summary: null,
   });
+  const [alerts, setAlerts] = useState<Array<BudgetAlert & { id: string }>>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -44,15 +53,17 @@ export function ExpenseDashboard() {
 
   async function loadInitialData() {
     try {
-      const [categoriesResponse, expensesResponse] = await Promise.all([
+      const [categoriesResponse, expensesResponse, summaryResponse] = await Promise.all([
         api.get('/categories'),
         api.get('/expenses'),
+        api.get('/dashboard/summary'),
       ]);
 
       setState((current) => ({
         ...current,
         categories: categoriesResponse.data.categories,
         expenses: expensesResponse.data.expenses,
+        summary: summaryResponse.data,
       }));
     } catch (error) {
       setState((current) => ({
@@ -233,9 +244,74 @@ export function ExpenseDashboard() {
   const canConfirm =
     !!state.preview?.amount && Number(state.preview.amount) > 0 && !!state.preview.category?.id;
 
+  useEffect(() => {
+    if (!user || !accessToken) {
+      return;
+    }
+
+    const stream = new EventSource(
+      `${DASHBOARD_STREAM_URL}?token=${encodeURIComponent(accessToken)}`,
+    );
+
+    stream.addEventListener('summary', (event) => {
+      const payload = JSON.parse((event as MessageEvent<string>).data) as DashboardSummary;
+      setState((current) => ({ ...current, summary: payload }));
+    });
+
+    stream.addEventListener('budget_alert', (event) => {
+      const payload = JSON.parse((event as MessageEvent<string>).data) as BudgetAlert;
+      setAlerts((current) => [
+        { ...payload, id: `${payload.categoryId}-${payload.threshold}-${Date.now()}` },
+        ...current,
+      ]);
+    });
+
+    return () => {
+      stream.close();
+    };
+  }, [accessToken, user]);
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.22),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.58),rgba(250,247,242,1))] p-4 md:p-8">
       <div className="mx-auto max-w-6xl space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-3">
+            <DashboardNav />
+            <div>
+              <h1 className="text-3xl font-semibold">Live expense dashboard</h1>
+              <p className="text-sm text-muted-foreground">
+                Parse quickly, confirm deliberately, and watch the monthly summary update live.
+              </p>
+            </div>
+          </div>
+          <div className="text-right text-sm">
+            <p className="font-medium">{user?.name}</p>
+            <button
+              className="text-muted-foreground underline underline-offset-4"
+              onClick={() => logout()}
+              type="button"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+
+        <SummaryCards summary={state.summary} />
+
+        {alerts.length ? (
+          <div className="space-y-3">
+            {alerts.slice(0, 3).map((alert) => (
+              <BudgetAlertToast
+                alert={alert}
+                key={alert.id}
+                onDismiss={() =>
+                  setAlerts((current) => current.filter((currentAlert) => currentAlert.id !== alert.id))
+                }
+              />
+            ))}
+          </div>
+        ) : null}
+
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <Card className="border-white/60 bg-white/88 shadow-xl backdrop-blur">
             <CardHeader>
@@ -246,16 +322,9 @@ export function ExpenseDashboard() {
                     Type, speak, or upload a receipt. We parse first, you confirm second.
                   </CardDescription>
                 </div>
-                <div className="text-right text-sm">
-                  <p className="font-medium">{user?.name}</p>
-                  <button
-                    className="text-muted-foreground underline underline-offset-4"
-                    onClick={() => logout()}
-                    type="button"
-                  >
-                    Logout
-                  </button>
-                </div>
+                <Link className="text-sm text-muted-foreground underline underline-offset-4" href="/budgets">
+                  Manage budgets
+                </Link>
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
