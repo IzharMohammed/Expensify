@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { DrizzleService } from '../database/drizzle.service';
 import { NewUser, User, users } from '../database/schema';
 
@@ -20,5 +20,9 @@ export class UsersService {
   async create(data: NewUser): Promise<User> {
     const [user] = await this.drizzle.db.insert(users).values(data).returning();
     return user;
+  }
+
+  async listAll(): Promise<User[]> {
+    return this.drizzle.db.select().from(users).orderBy(asc(users.createdAt));
   }
 }

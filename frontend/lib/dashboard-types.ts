@@ -32,3 +32,22 @@ export type BudgetAlert = {
   threshold: 80 | 100;
   month: string;
 };
+
+export type InsightRecord = {
+  id: string;
+  userId: string;
+  date: string;
+  month: string;
+  insightText: string;
+  category: string | null;
+  type: 'spending_pattern' | 'comparison' | 'suggestion' | 'prediction';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+};
+
+export type InsightHistoryResponse = {
+  items: InsightRecord[];
+  page: number;
+  limit: number;
+  total: number;
+};

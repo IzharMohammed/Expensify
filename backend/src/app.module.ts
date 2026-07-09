@@ -7,6 +7,8 @@ import { CategoriesModule } from './categories/categories.module';
 import { DrizzleModule } from './database/drizzle.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { InsightsModule } from './insights/insights.module';
+import { InsightsQueueService } from './queues/insights-queue.service';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { ExpensesModule } from './expenses/expenses.module';
     BudgetsModule,
     DashboardModule,
     ExpensesModule,
+    InsightsModule,
   ],
+  providers: [InsightsQueueService],
 })
 export class AppModule {}

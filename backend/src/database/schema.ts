@@ -1,5 +1,6 @@
 import {
   boolean,
+  date as pgDate,
   index,
   numeric,
   pgEnum,
@@ -13,6 +14,13 @@ import {
 export const authProviderEnum = pgEnum('auth_provider', ['local', 'google']);
 export const paymentMethodEnum = pgEnum('payment_method', ['upi', 'card', 'cash', 'netbanking']);
 export const expenseSourceEnum = pgEnum('expense_source', ['text', 'voice', 'ocr', 'manual']);
+export const insightTypeEnum = pgEnum('insight_type', [
+  'spending_pattern',
+  'comparison',
+  'suggestion',
+  'prediction',
+]);
+export const insightPriorityEnum = pgEnum('insight_priority', ['low', 'medium', 'high']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -117,6 +125,27 @@ export const monthlyIncome = pgTable(
   }),
 );
 
+export const insights = pgTable(
+  'insights',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    date: pgDate('date', { mode: 'date' }).notNull(),
+    month: pgDate('month', { mode: 'date' }).notNull(),
+    insightText: text('insight_text').notNull(),
+    category: text('category'),
+    type: insightTypeEnum('type').notNull(),
+    priority: insightPriorityEnum('priority').notNull().default('medium'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    insightsUserDateIdx: index('insights_user_date_idx').on(table.userId, table.date),
+    insightsUserMonthIdx: index('insights_user_month_idx').on(table.userId, table.month),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
@@ -127,3 +156,5 @@ export type NewExpense = typeof expenses.$inferInsert;
 export type Budget = typeof budgets.$inferSelect;
 export type NewBudget = typeof budgets.$inferInsert;
 export type MonthlyIncome = typeof monthlyIncome.$inferSelect;
+export type Insight = typeof insights.$inferSelect;
+export type NewInsight = typeof insights.$inferInsert;

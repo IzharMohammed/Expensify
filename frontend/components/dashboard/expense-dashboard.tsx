@@ -7,6 +7,7 @@ import { useAuth } from '@/components/auth/auth-provider';
 import { BudgetAlertToast } from '@/components/dashboard/budget-alert-toast';
 import { DashboardNav } from '@/components/dashboard/dashboard-nav';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
+import { InsightsPanel } from '@/components/insights/insights-panel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -311,6 +312,8 @@ export function ExpenseDashboard() {
             ))}
           </div>
         ) : null}
+
+        <InsightsPanel />
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <Card className="border-white/60 bg-white/88 shadow-xl backdrop-blur">
