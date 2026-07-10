@@ -3,6 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { buildInsightsPrompt } from './prompts/insights.prompt';
 import { AggregatedInsightInput, GeneratedAiInsight } from './types/insight.types';
 
+const ALLOWED_TYPES = new Set<GeneratedAiInsight['type']>([
+  'spending_pattern',
+  'comparison',
+  'suggestion',
+  'prediction',
+]);
+
+const ALLOWED_PRIORITIES = new Set<GeneratedAiInsight['priority']>(['low', 'medium', 'high']);
+
 @Injectable()
 export class InsightsAiService {
   private readonly apiKey: string;
@@ -45,9 +54,42 @@ export class InsightsAiService {
 
     try {
       const parsed = JSON.parse(content) as { insights?: GeneratedAiInsight[] };
-      return (parsed.insights ?? []).slice(0, 5);
+      return (parsed.insights ?? [])
+        .map((insight) => this.normalizeInsight(insight))
+        .filter((insight): insight is GeneratedAiInsight => insight !== null)
+        .slice(0, 5);
     } catch {
       throw new InternalServerErrorException('Groq insights response was invalid JSON');
     }
+  }
+
+  private normalizeInsight(insight: Partial<GeneratedAiInsight> | null | undefined) {
+    if (!insight || typeof insight.insight_text !== 'string' || !insight.insight_text.trim()) {
+      return null;
+    }
+
+    const normalizedType = this.normalizeType(insight.type);
+    const normalizedPriority = ALLOWED_PRIORITIES.has(insight.priority as GeneratedAiInsight['priority'])
+      ? (insight.priority as GeneratedAiInsight['priority'])
+      : 'medium';
+
+    return {
+      insight_text: insight.insight_text.trim(),
+      category: typeof insight.category === 'string' && insight.category.trim() ? insight.category.trim() : null,
+      type: normalizedType,
+      priority: normalizedPriority,
+    } satisfies GeneratedAiInsight;
+  }
+
+  private normalizeType(type: unknown): GeneratedAiInsight['type'] {
+    if (typeof type === 'string' && ALLOWED_TYPES.has(type as GeneratedAiInsight['type'])) {
+      return type as GeneratedAiInsight['type'];
+    }
+
+    if (type === 'budget_pressure' || type === 'warning' || type === 'alert') {
+      return 'suggestion';
+    }
+
+    return 'suggestion';
   }
 }
