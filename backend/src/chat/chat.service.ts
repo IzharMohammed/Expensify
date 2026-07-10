@@ -51,15 +51,54 @@ const CHAT_TOOLS = [
     function: {
       name: 'get_top_merchants',
       description:
-        'Get the highest-spend merchants for one month, including spend and transaction count.',
+        'Get the highest-spend merchants for a time range, including spend and transaction count.',
       parameters: {
         type: 'object',
         additionalProperties: false,
         properties: {
-          month: { type: 'string', description: 'Month in YYYY-MM format' },
-          limit: { type: 'number', minimum: 1, maximum: 10 },
+          range: {
+            type: 'string',
+            enum: ['this_week', 'this_month', 'last_month'],
+            description: 'Time range to inspect.',
+          },
+          month: {
+            type: 'string',
+            description: 'Optional explicit month in YYYY-MM format when the user asks for a specific month.',
+          },
+          limit: {
+            type: 'string',
+            description: 'How many merchants to return, as digits from 1 to 10. Example: "5".',
+          },
         },
-        required: ['month', 'limit'],
+        required: ['range', 'limit'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_top_categories',
+      description:
+        'Get the highest-spend categories for a time range, including spend and transaction count.',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          range: {
+            type: 'string',
+            enum: ['this_week', 'this_month', 'last_month'],
+            description: 'Time range to inspect.',
+          },
+          month: {
+            type: 'string',
+            description: 'Optional explicit month in YYYY-MM format when the user asks for a specific month.',
+          },
+          limit: {
+            type: 'string',
+            description: 'How many categories to return, as digits from 1 to 10. Example: "5".',
+          },
+        },
+        required: ['range', 'limit'],
       },
     },
   },
@@ -73,7 +112,10 @@ const CHAT_TOOLS = [
         type: 'object',
         additionalProperties: false,
         properties: {
-          targetAmount: { type: 'number', minimum: 0 },
+          targetAmount: {
+            type: 'string',
+            description: 'Target amount as digits. Example: "15000".',
+          },
         },
         required: ['targetAmount'],
       },
@@ -116,35 +158,41 @@ export class ChatService {
       },
     ];
 
-    const planned = await this.chatAiService.planToolCalls({
-      systemPrompt: this.buildPlannerPrompt(),
-      messages: plannerMessages,
-      tools: CHAT_TOOLS,
-    });
-
     const toolResults = [];
-    for (const toolCall of planned.toolCalls.slice(0, 3)) {
-      toolResults.push(await this.executeToolCall(userId, toolCall));
+    let answer = '';
+
+    try {
+      const planned = await this.chatAiService.planToolCalls({
+        systemPrompt: this.buildPlannerPrompt(),
+        messages: plannerMessages,
+        tools: CHAT_TOOLS,
+      });
+
+      for (const toolCall of planned.toolCalls.slice(0, 3)) {
+        toolResults.push(await this.executeToolCall(userId, toolCall));
+      }
+
+      const answerMessages: PlannerMessage[] = [
+        ...plannerMessages,
+        planned.assistantMessage,
+        ...toolResults.map((result) => ({
+          role: 'tool' as const,
+          tool_call_id: result.id,
+          content: JSON.stringify(result.payload),
+        })),
+      ];
+
+      answer =
+        toolResults.length > 0
+          ? await this.chatAiService.answerFromToolResults({
+              systemPrompt: this.buildAnswerPrompt(),
+              messages: answerMessages,
+            })
+          : planned.assistantMessage.content?.trim() ||
+            'I need a little more detail to answer that from your expense data.';
+    } catch (error) {
+      answer = this.buildFallbackAnswer(dto.message, error);
     }
-
-    const answerMessages: PlannerMessage[] = [
-      ...plannerMessages,
-      planned.assistantMessage,
-      ...toolResults.map((result) => ({
-        role: 'tool' as const,
-        tool_call_id: result.id,
-        content: JSON.stringify(result.payload),
-      })),
-    ];
-
-    const answer =
-      toolResults.length > 0
-        ? await this.chatAiService.answerFromToolResults({
-            systemPrompt: this.buildAnswerPrompt(),
-            messages: answerMessages,
-          })
-        : planned.assistantMessage.content?.trim() ||
-          'I need a little more detail to answer that from your expense data.';
 
     await this.drizzle.db.insert(chatMessages).values([
       {
@@ -226,7 +274,18 @@ export class ChatService {
           id: toolCall.id,
           payload: await this.getTopMerchants(
             userId,
-            this.readMonth(toolCall.arguments.month, 'month'),
+            this.readRange(toolCall.arguments.range),
+            this.readOptionalMonth(toolCall.arguments.month),
+            this.readNumber(toolCall.arguments.limit, 'limit', 1, 10),
+          ),
+        };
+      case 'get_top_categories':
+        return {
+          id: toolCall.id,
+          payload: await this.getTopCategories(
+            userId,
+            this.readRange(toolCall.arguments.range),
+            this.readOptionalMonth(toolCall.arguments.month),
             this.readNumber(toolCall.arguments.limit, 'limit', 1, 10),
           ),
         };
@@ -244,8 +303,6 @@ export class ChatService {
   }
 
   private async getCategoryTotal(userId: string, categoryName: string, month: string) {
-    console.log("calling getCategoryTotal");
-    
     const category = await this.resolveCategory(userId, categoryName);
     const monthStart = this.monthStart(month);
     const nextMonthStart = this.nextMonth(monthStart);
@@ -268,8 +325,6 @@ export class ChatService {
   }
 
   private async compareMonths(userId: string, monthA: string, monthB: string) {
-    console.log("calling compareMonths");
-    
     const monthAStart = this.monthStart(monthA);
     const monthBStart = this.monthStart(monthB);
     const monthAEnd = this.nextMonth(monthAStart);
@@ -346,11 +401,13 @@ export class ChatService {
     };
   }
 
-  private async getTopMerchants(userId: string, month: string, limit: number) {
-    console.log("calling getTopMerchants");
-    
-    const monthStart = this.monthStart(month);
-    const nextMonthStart = this.nextMonth(monthStart);
+  private async getTopMerchants(
+    userId: string,
+    range: 'this_week' | 'this_month' | 'last_month',
+    month: string | null,
+    limit: number,
+  ) {
+    const { label, rangeStart, rangeEnd } = this.resolveDateRange(range, month);
 
     const result = await this.drizzle.db.execute(sql`
       SELECT
@@ -359,8 +416,8 @@ export class ChatService {
         COUNT(*)::int AS transactions
       FROM expenses e
       WHERE e.user_id = ${userId}
-        AND e.date >= ${monthStart}
-        AND e.date < ${nextMonthStart}
+        AND e.date >= ${rangeStart}
+        AND e.date < ${rangeEnd}
       GROUP BY e.merchant
       ORDER BY total DESC, transactions DESC, merchant ASC
       LIMIT ${limit}
@@ -368,7 +425,7 @@ export class ChatService {
 
     return {
       function: 'get_top_merchants',
-      month,
+      range: label,
       limit,
       merchants: result.rows.map((row) => ({
         merchant: String(row.merchant),
@@ -378,9 +435,42 @@ export class ChatService {
     };
   }
 
+  private async getTopCategories(
+    userId: string,
+    range: 'this_week' | 'this_month' | 'last_month',
+    month: string | null,
+    limit: number,
+  ) {
+    const { label, rangeStart, rangeEnd } = this.resolveDateRange(range, month);
+
+    const result = await this.drizzle.db.execute(sql`
+      SELECT
+        c.name AS category,
+        COALESCE(SUM(e.amount::numeric), 0)::float8 AS total,
+        COUNT(e.id)::int AS transactions
+      FROM expenses e
+      LEFT JOIN categories c ON c.id = e.category_id
+      WHERE e.user_id = ${userId}
+        AND e.date >= ${rangeStart}
+        AND e.date < ${rangeEnd}
+      GROUP BY c.name
+      ORDER BY total DESC, transactions DESC, category ASC
+      LIMIT ${limit}
+    `);
+
+    return {
+      function: 'get_top_categories',
+      range: label,
+      limit,
+      categories: result.rows.map((row) => ({
+        category: row.category ? String(row.category) : 'Uncategorized',
+        total: Number(row.total ?? 0),
+        transactions: Number(row.transactions ?? 0),
+      })),
+    };
+  }
+
   private async projectSavings(userId: string, targetAmount: number) {
-    console.log("calling projectSavings");
-    
     const now = new Date();
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const nextMonthStart = this.nextMonth(monthStart);
@@ -444,7 +534,11 @@ export class ChatService {
       'If a target savings question is asked, call project_savings.',
       'If the user asks for comparison, call compare_months.',
       'If the user asks about a category, call get_category_total.',
-      'If the user asks where money is going, call get_top_merchants and optionally compare_months.',
+      'If the user asks where money is going by merchant, brand, app, or store, call get_top_merchants.',
+      'If the user asks where money is going by type of expense, call get_top_categories.',
+      'If the user asks about this week, use range this_week.',
+      'If the user asks about this month, use range this_month.',
+      'If the user asks about last month, use range last_month.',
       'If the prompt is just a greeting, reply briefly without calling tools.',
     ].join(' ');
   }
@@ -476,13 +570,34 @@ export class ChatService {
     return month;
   }
 
+  private readOptionalMonth(value: unknown) {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    return this.readMonth(value, 'month');
+  }
+
   private readNumber(value: unknown, field: string, min: number, max = Number.MAX_SAFE_INTEGER) {
-    const parsed = typeof value === 'number' ? value : Number(value);
+    const parsed =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number(value.trim())
+          : Number(value);
     if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
       throw new BadRequestException(`Invalid ${field}`);
     }
 
     return parsed;
+  }
+
+  private readRange(value: unknown) {
+    if (value === 'this_week' || value === 'this_month' || value === 'last_month') {
+      return value;
+    }
+
+    throw new BadRequestException('Invalid range');
   }
 
   private monthStart(month: string) {
@@ -494,5 +609,63 @@ export class ChatService {
     const nextMonthStart = new Date(monthStart);
     nextMonthStart.setUTCMonth(nextMonthStart.getUTCMonth() + 1);
     return nextMonthStart;
+  }
+
+  private resolveDateRange(range: 'this_week' | 'this_month' | 'last_month', month: string | null) {
+    if (month) {
+      const rangeStart = this.monthStart(month);
+      return {
+        label: month,
+        rangeStart,
+        rangeEnd: this.nextMonth(rangeStart),
+      };
+    }
+
+    const now = new Date();
+    if (range === 'this_week') {
+      const day = now.getUTCDay();
+      const rangeStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      rangeStart.setUTCDate(rangeStart.getUTCDate() - day);
+      const rangeEnd = new Date(rangeStart);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 7);
+      return {
+        label: 'this_week',
+        rangeStart,
+        rangeEnd,
+      };
+    }
+
+    if (range === 'last_month') {
+      const rangeEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      const rangeStart = new Date(rangeEnd);
+      rangeStart.setUTCMonth(rangeStart.getUTCMonth() - 1);
+      return {
+        label: 'last_month',
+        rangeStart,
+        rangeEnd,
+      };
+    }
+
+    const rangeStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    return {
+      label: 'this_month',
+      rangeStart,
+      rangeEnd: this.nextMonth(rangeStart),
+    };
+  }
+
+  private buildFallbackAnswer(message: string, error: unknown) {
+    const lowered = message.toLowerCase();
+    const details = error instanceof Error ? error.message : '';
+
+    if (lowered.includes('this week')) {
+      return 'I could not finish the weekly spending breakdown just now. Please try again. If it still fails, ask "show my top spending categories this week" or "show my top merchants this week".';
+    }
+
+    if (details.includes('tool call validation failed')) {
+      return 'I ran into a formatting issue while preparing that answer. Please try again. I will now fall back to a normal assistant reply instead of showing the raw provider error.';
+    }
+
+    return 'I could not answer that from your expense data right now. Please try again in a moment.';
   }
 }

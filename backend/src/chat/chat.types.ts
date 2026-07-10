@@ -2,6 +2,7 @@ export type ChatToolName =
   | 'get_category_total'
   | 'compare_months'
   | 'get_top_merchants'
+  | 'get_top_categories'
   | 'project_savings';
 
 export type PlannerMessage = {
