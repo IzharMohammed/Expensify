@@ -33,6 +33,10 @@ export class InsightsQueueService implements OnModuleInit, OnModuleDestroy {
     this.worker.on('failed', (job: Job | undefined, error: Error) => {
       this.logger.error(`Insights job ${job?.id ?? 'unknown'} failed: ${error.message}`);
     });
+
+    this.worker.on('completed', (job: Job) => {
+      this.logger.log(`Insights job ${job.id} completed successfully`);
+    });
   }
 
   async onModuleInit() {
@@ -55,5 +59,13 @@ export class InsightsQueueService implements OnModuleInit, OnModuleDestroy {
       this.queue.close(),
       this.redisConnection.quit(),
     ]);
+  }
+
+  getQueue() {
+    return this.queue;
+  }
+
+  getCronPattern() {
+    return this.configService.get<string>('INSIGHTS_CRON') ?? '0 23 * * *';
   }
 }

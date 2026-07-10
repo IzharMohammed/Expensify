@@ -1,3 +1,5 @@
+import { BullBoardModule } from '@bull-board/nestjs';
+import { ExpressAdapter } from '@bull-board/express';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -9,6 +11,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { InsightsModule } from './insights/insights.module';
 import { InsightsQueueService } from './queues/insights-queue.service';
+import { QueueBoardService } from './queues/queue-board.service';
 
 @Module({
   imports: [
@@ -22,6 +25,10 @@ import { InsightsQueueService } from './queues/insights-queue.service';
         limit: 20,
       },
     ]),
+    BullBoardModule.forRoot({
+      route: process.env.BULL_BOARD_ROUTE ?? '/admin/queues',
+      adapter: ExpressAdapter,
+    }),
     DrizzleModule,
     AuthModule,
     CategoriesModule,
@@ -30,6 +37,6 @@ import { InsightsQueueService } from './queues/insights-queue.service';
     ExpensesModule,
     InsightsModule,
   ],
-  providers: [InsightsQueueService],
+  providers: [InsightsQueueService, QueueBoardService],
 })
 export class AppModule {}
