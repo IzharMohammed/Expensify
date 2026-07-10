@@ -6,6 +6,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { CategoriesModule } from './categories/categories.module';
+import { ChatModule } from './chat/chat.module';
 import { DrizzleModule } from './database/drizzle.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
@@ -31,6 +32,7 @@ import { QueueBoardService } from './queues/queue-board.service';
     }),
     DrizzleModule,
     AuthModule,
+    ChatModule,
     CategoriesModule,
     BudgetsModule,
     DashboardModule,

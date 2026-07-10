@@ -21,6 +21,7 @@ export const insightTypeEnum = pgEnum('insight_type', [
   'prediction',
 ]);
 export const insightPriorityEnum = pgEnum('insight_priority', ['low', 'medium', 'high']);
+export const chatRoleEnum = pgEnum('chat_role', ['user', 'assistant']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -146,6 +147,31 @@ export const insights = pgTable(
   }),
 );
 
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    conversationId: uuid('conversation_id').notNull(),
+    role: chatRoleEnum('role').notNull(),
+    content: text('content').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    chatMessagesUserConversationIdx: index('chat_messages_user_conversation_idx').on(
+      table.userId,
+      table.conversationId,
+      table.createdAt,
+    ),
+    chatMessagesUserCreatedIdx: index('chat_messages_user_created_idx').on(
+      table.userId,
+      table.createdAt,
+    ),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
@@ -158,3 +184,5 @@ export type NewBudget = typeof budgets.$inferInsert;
 export type MonthlyIncome = typeof monthlyIncome.$inferSelect;
 export type Insight = typeof insights.$inferSelect;
 export type NewInsight = typeof insights.$inferInsert;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type NewChatMessage = typeof chatMessages.$inferInsert;
