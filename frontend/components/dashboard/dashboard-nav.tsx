@@ -11,6 +11,7 @@ export function DashboardNav() {
     { href: '/', label: 'Capture' },
     { href: '/budgets', label: 'Budgets' },
     { href: '/goals', label: 'Goals' },
+    { href: '/recurring', label: 'Recurring' },
     { href: '/insights', label: 'Insights' },
     { href: '/chat', label: 'Chat' },
   ];

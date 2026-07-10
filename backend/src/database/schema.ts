@@ -22,6 +22,8 @@ export const insightTypeEnum = pgEnum('insight_type', [
 ]);
 export const insightPriorityEnum = pgEnum('insight_priority', ['low', 'medium', 'high']);
 export const chatRoleEnum = pgEnum('chat_role', ['user', 'assistant']);
+export const recurringFrequencyEnum = pgEnum('recurring_frequency', ['monthly', 'weekly', 'yearly']);
+export const notificationTypeEnum = pgEnum('notification_type', ['recurring_due']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -209,6 +211,55 @@ export const goalContributions = pgTable(
   }),
 );
 
+export const recurringExpenses = pgTable(
+  'recurring_expenses',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    merchant: text('merchant').notNull(),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+    categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
+    frequency: recurringFrequencyEnum('frequency').notNull(),
+    nextDueDate: timestamp('next_due_date', { withTimezone: true }).notNull(),
+    isAutoDetected: boolean('is_auto_detected').notNull().default(true),
+    isConfirmed: boolean('is_confirmed').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    recurringExpensesUserConfirmedIdx: index('recurring_expenses_user_confirmed_idx').on(
+      table.userId,
+      table.isConfirmed,
+      table.nextDueDate,
+    ),
+    recurringExpensesCategoryIdx: index('recurring_expenses_category_idx').on(table.categoryId),
+  }),
+);
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    recurringExpenseId: uuid('recurring_expense_id').references(() => recurringExpenses.id, {
+      onDelete: 'cascade',
+    }),
+    type: notificationTypeEnum('type').notNull(),
+    message: text('message').notNull(),
+    read: boolean('read').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    notificationsUserCreatedIdx: index('notifications_user_created_idx').on(
+      table.userId,
+      table.createdAt,
+    ),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
@@ -227,3 +278,7 @@ export type Goal = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
 export type GoalContribution = typeof goalContributions.$inferSelect;
 export type NewGoalContribution = typeof goalContributions.$inferInsert;
+export type RecurringExpense = typeof recurringExpenses.$inferSelect;
+export type NewRecurringExpense = typeof recurringExpenses.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;

@@ -14,6 +14,8 @@ import { GoalsModule } from './goals/goals.module';
 import { InsightsModule } from './insights/insights.module';
 import { InsightsQueueService } from './queues/insights-queue.service';
 import { QueueBoardService } from './queues/queue-board.service';
+import { RecurringQueueService } from './queues/recurring-queue.service';
+import { RecurringModule } from './recurring/recurring.module';
 
 @Module({
   imports: [
@@ -40,7 +42,8 @@ import { QueueBoardService } from './queues/queue-board.service';
     ExpensesModule,
     GoalsModule,
     InsightsModule,
+    RecurringModule,
   ],
-  providers: [InsightsQueueService, QueueBoardService],
+  providers: [InsightsQueueService, RecurringQueueService, QueueBoardService],
 })
 export class AppModule {}
