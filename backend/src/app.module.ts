@@ -10,6 +10,7 @@ import { ChatModule } from './chat/chat.module';
 import { DrizzleModule } from './database/drizzle.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { GoalsModule } from './goals/goals.module';
 import { InsightsModule } from './insights/insights.module';
 import { InsightsQueueService } from './queues/insights-queue.service';
 import { QueueBoardService } from './queues/queue-board.service';
@@ -37,6 +38,7 @@ import { QueueBoardService } from './queues/queue-board.service';
     BudgetsModule,
     DashboardModule,
     ExpensesModule,
+    GoalsModule,
     InsightsModule,
   ],
   providers: [InsightsQueueService, QueueBoardService],

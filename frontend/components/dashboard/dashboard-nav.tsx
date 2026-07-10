@@ -10,6 +10,7 @@ export function DashboardNav() {
   const links = [
     { href: '/', label: 'Capture' },
     { href: '/budgets', label: 'Budgets' },
+    { href: '/goals', label: 'Goals' },
     { href: '/insights', label: 'Insights' },
     { href: '/chat', label: 'Chat' },
   ];

@@ -172,6 +172,43 @@ export const chatMessages = pgTable(
   }),
 );
 
+export const goals = pgTable(
+  'goals',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    targetAmount: numeric('target_amount', { precision: 12, scale: 2 }).notNull(),
+    currentAmount: numeric('current_amount', { precision: 12, scale: 2 }).notNull().default('0'),
+    targetDate: timestamp('target_date', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    goalsUserCreatedIdx: index('goals_user_created_idx').on(table.userId, table.createdAt),
+  }),
+);
+
+export const goalContributions = pgTable(
+  'goal_contributions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    goalId: uuid('goal_id')
+      .notNull()
+      .references(() => goals.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+    date: timestamp('date', { withTimezone: true }).notNull(),
+    note: text('note'),
+  },
+  (table) => ({
+    goalContributionsGoalDateIdx: index('goal_contributions_goal_date_idx').on(
+      table.goalId,
+      table.date,
+    ),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type RefreshToken = typeof refreshTokens.$inferSelect;
@@ -186,3 +223,7 @@ export type Insight = typeof insights.$inferSelect;
 export type NewInsight = typeof insights.$inferInsert;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type NewChatMessage = typeof chatMessages.$inferInsert;
+export type Goal = typeof goals.$inferSelect;
+export type NewGoal = typeof goals.$inferInsert;
+export type GoalContribution = typeof goalContributions.$inferSelect;
+export type NewGoalContribution = typeof goalContributions.$inferInsert;
