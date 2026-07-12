@@ -23,7 +23,12 @@ export const insightTypeEnum = pgEnum('insight_type', [
 export const insightPriorityEnum = pgEnum('insight_priority', ['low', 'medium', 'high']);
 export const chatRoleEnum = pgEnum('chat_role', ['user', 'assistant']);
 export const recurringFrequencyEnum = pgEnum('recurring_frequency', ['monthly', 'weekly', 'yearly']);
-export const notificationTypeEnum = pgEnum('notification_type', ['recurring_due']);
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'budget_alert',
+  'recurring_due',
+  'no_spend_today',
+  'anomaly_alert',
+]);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -249,7 +254,7 @@ export const notifications = pgTable(
     }),
     type: notificationTypeEnum('type').notNull(),
     message: text('message').notNull(),
-    read: boolean('read').notNull().default(false),
+    isRead: boolean('is_read').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({

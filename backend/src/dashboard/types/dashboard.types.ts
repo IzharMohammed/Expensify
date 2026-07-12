@@ -22,4 +22,16 @@ export type DashboardStreamEvent =
         threshold: 80 | 100;
         month: string;
       };
+    }
+  | {
+      type: 'notification';
+      data: {
+        id: string;
+        userId: string;
+        recurringExpenseId: string | null;
+        type: 'budget_alert' | 'recurring_due' | 'no_spend_today' | 'anomaly_alert';
+        message: string;
+        isRead: boolean;
+        createdAt: string;
+      };
     };

@@ -33,6 +33,16 @@ export type BudgetAlert = {
   month: string;
 };
 
+export type AppNotification = {
+  id: string;
+  userId: string;
+  recurringExpenseId: string | null;
+  type: 'budget_alert' | 'recurring_due' | 'no_spend_today' | 'anomaly_alert';
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export type InsightRecord = {
   id: string;
   userId: string;

@@ -6,6 +6,7 @@ import { DrizzleService } from '../database/drizzle.service';
 import { expenses } from '../database/schema';
 import { DashboardEventsService } from '../dashboard/dashboard-events.service';
 import { DashboardService } from '../dashboard/dashboard.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { GroqService } from './groq.service';
@@ -19,6 +20,7 @@ export class ExpensesService {
     private readonly budgetsService: BudgetsService,
     private readonly dashboardService: DashboardService,
     private readonly dashboardEventsService: DashboardEventsService,
+    private readonly notificationsService: NotificationsService,
     private readonly groqService: GroqService,
     private readonly storageService: StorageService,
   ) {}
@@ -92,6 +94,11 @@ export class ExpensesService {
     );
 
     if (alert) {
+      await this.notificationsService.createNotification(
+        userId,
+        'budget_alert',
+        `${alert.categoryName} crossed ${alert.threshold}% of its budget for ${alert.month}.`,
+      );
       await this.dashboardEventsService.publish(userId, {
         type: 'budget_alert',
         data: alert,

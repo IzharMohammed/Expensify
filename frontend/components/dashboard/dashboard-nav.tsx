@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { NotificationBell } from '@/components/dashboard/notification-bell';
 import { cn } from '@/lib/utils';
 
 export function DashboardNav() {
@@ -17,21 +18,24 @@ export function DashboardNav() {
   ];
 
   return (
-    <nav className="flex flex-wrap gap-2">
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          className={cn(
-            'rounded-full px-4 py-2 text-sm font-medium transition',
-            pathname === link.href
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-white/80 text-foreground hover:bg-white',
-          )}
-          href={link.href}
-        >
-          {link.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="flex flex-wrap items-center gap-2">
+      <nav className="flex flex-wrap gap-2">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            className={cn(
+              'rounded-full px-4 py-2 text-sm font-medium transition',
+              pathname === link.href
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-white/80 text-foreground hover:bg-white',
+            )}
+            href={link.href}
+          >
+            {link.label}
+          </Link>
+        ))}
+      </nav>
+      <NotificationBell />
+    </div>
   );
 }

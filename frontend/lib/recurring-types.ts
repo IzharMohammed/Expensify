@@ -16,7 +16,7 @@ export type RecurringReminder = {
   id: string;
   message: string;
   createdAt: string;
-  read: boolean;
+  isRead: boolean;
   recurringExpenseId: string | null;
 };
 

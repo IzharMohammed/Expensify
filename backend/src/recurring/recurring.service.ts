@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
 import { DrizzleService } from '../database/drizzle.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   notifications,
   recurringExpenses,
@@ -19,7 +20,10 @@ type ExpenseRow = {
 
 @Injectable()
 export class RecurringService {
-  constructor(private readonly drizzle: DrizzleService) {}
+  constructor(
+    private readonly drizzle: DrizzleService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async list(userId: string) {
     const [confirmed, pending, reminderRows] = await Promise.all([
@@ -49,7 +53,7 @@ export class RecurringService {
         id: row.id,
         message: row.message,
         createdAt: row.createdAt.toISOString(),
-        read: row.read,
+        isRead: row.isRead,
         recurringExpenseId: row.recurringExpenseId,
       })),
     };
@@ -205,12 +209,12 @@ export class RecurringService {
         continue;
       }
 
-      await this.drizzle.db.insert(notifications).values({
+      await this.notificationsService.createNotification(
         userId,
-        recurringExpenseId: recurring.id,
-        type: 'recurring_due',
-        message: `${recurring.merchant} renews tomorrow`,
-      });
+        'recurring_due',
+        `${recurring.merchant} renews tomorrow`,
+        { recurringExpenseId: recurring.id },
+      );
     }
   }
 
