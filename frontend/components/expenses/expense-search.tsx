@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LoaderCircle, Plus, ReceiptText, Search, SlidersHorizontal, Tag, X } from 'lucide-react';
+import { LoaderCircle, Paperclip, Plus, ReceiptText, Search, SlidersHorizontal, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { MoneyDisplay } from '@/components/ui/money-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { Category, ExpenseRecord, ExpenseTag } from '@/lib/expense-types';
+import { ExpenseAttachments } from './expense-attachments';
 
 const PAYMENT_METHODS = ['upi', 'card', 'cash', 'netbanking'] as const;
 const AMOUNT_CEILING = 100_000;
@@ -360,6 +361,7 @@ function ExpenseRow(props: {
   const [tagInput, setTagInput] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const attachedIds = new Set((props.expense.tags ?? []).map((tag) => tag.id));
   const suggestions = props.allTags.filter(
@@ -435,6 +437,7 @@ function ExpenseRow(props: {
         >
           <Tag className="mr-1 h-3 w-3" /> Add tag
         </button>
+        <button className="inline-flex items-center rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground hover:border-primary/30 hover:text-foreground" onClick={() => setAttachmentsOpen(true)} type="button"><Paperclip className="mr-1 h-3 w-3" />Attachments</button>
       </div>
 
       {editing ? (
@@ -474,6 +477,7 @@ function ExpenseRow(props: {
           {error ? <p className="mt-1 text-xs text-danger">{error}</p> : null}
         </div>
       ) : null}
+      <ExpenseAttachments expense={props.expense} onClose={() => setAttachmentsOpen(false)} open={attachmentsOpen} />
     </article>
   );
 }

@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 import { BudgetsModule } from './budgets/budgets.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ChatModule } from './chat/chat.module';
@@ -39,6 +40,7 @@ import { RecurringModule } from './recurring/recurring.module';
     DrizzleModule,
     AuthModule,
     AnalyticsModule,
+    AttachmentsModule,
     ChatModule,
     CategoriesModule,
     BudgetsModule,

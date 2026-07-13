@@ -45,3 +45,13 @@ export type ExpenseTag = {
   id: string;
   name: string;
 };
+
+export type AttachmentRecord = {
+  id: string;
+  expenseId: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: 'image' | 'pdf';
+  label: 'receipt' | 'invoice' | 'warranty' | 'other';
+  uploadedAt: string;
+};

@@ -15,6 +15,13 @@ import { sql } from 'drizzle-orm';
 export const authProviderEnum = pgEnum('auth_provider', ['local', 'google']);
 export const paymentMethodEnum = pgEnum('payment_method', ['upi', 'card', 'cash', 'netbanking']);
 export const expenseSourceEnum = pgEnum('expense_source', ['text', 'voice', 'ocr', 'manual']);
+export const attachmentFileTypeEnum = pgEnum('attachment_file_type', ['image', 'pdf']);
+export const attachmentLabelEnum = pgEnum('attachment_label', [
+  'receipt',
+  'invoice',
+  'warranty',
+  'other',
+]);
 export const insightTypeEnum = pgEnum('insight_type', [
   'spending_pattern',
   'comparison',
@@ -89,6 +96,26 @@ export const expenses = pgTable(
     expensesUserIdIdx: index('expenses_user_id_idx').on(table.userId),
     expensesCategoryIdIdx: index('expenses_category_id_idx').on(table.categoryId),
     expensesDateIdx: index('expenses_date_idx').on(table.date),
+  }),
+);
+
+export const attachments = pgTable(
+  'attachments',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    expenseId: uuid('expense_id')
+      .notNull()
+      .references(() => expenses.id, { onDelete: 'cascade' }),
+    fileUrl: text('file_url').notNull(),
+    fileType: attachmentFileTypeEnum('file_type').notNull(),
+    label: attachmentLabelEnum('label').notNull(),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    attachmentsExpenseUploadedIdx: index('attachments_expense_uploaded_idx').on(
+      table.expenseId,
+      table.uploadedAt,
+    ),
   }),
 );
 
@@ -313,6 +340,8 @@ export type NewExpense = typeof expenses.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
 export type ExpenseTag = typeof expenseTags.$inferSelect;
+export type Attachment = typeof attachments.$inferSelect;
+export type NewAttachment = typeof attachments.$inferInsert;
 export type Budget = typeof budgets.$inferSelect;
 export type NewBudget = typeof budgets.$inferInsert;
 export type MonthlyIncome = typeof monthlyIncome.$inferSelect;

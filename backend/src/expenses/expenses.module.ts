@@ -3,14 +3,14 @@ import { BudgetsModule } from '../budgets/budgets.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { DashboardModule } from '../dashboard/dashboard.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { StorageService } from '../storage/storage.service';
+import { StorageModule } from '../storage/storage.module';
 import { ExpensesController } from './expenses.controller';
 import { ExpensesService } from './expenses.service';
 import { GroqService } from './groq.service';
 
 @Module({
-  imports: [CategoriesModule, BudgetsModule, DashboardModule, NotificationsModule],
+  imports: [CategoriesModule, BudgetsModule, DashboardModule, NotificationsModule, StorageModule],
   controllers: [ExpensesController],
-  providers: [ExpensesService, GroqService, StorageService],
+  providers: [ExpensesService, GroqService],
 })
 export class ExpensesModule {}
