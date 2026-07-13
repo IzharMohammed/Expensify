@@ -2,12 +2,14 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { LoaderCircle, MessageSquareText, Sparkles } from 'lucide-react';
+import { Bot, MessageSquareText, Send, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
-import { DashboardNav } from '@/components/dashboard/dashboard-nav';
+import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
+import { PageSkeleton, Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { ChatMessage } from '@/lib/chat-types';
 
@@ -25,6 +27,7 @@ export function ChatPage() {
   const [input, setInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -54,18 +57,13 @@ export function ChatPage() {
       })
       .catch(() => {
         setError('Failed to load chat history');
-      });
+      })
+      .finally(() => setHistoryLoading(false));
   }, [conversationId, user]);
 
   const emptyState = useMemo(
     () => (
-      <div className="flex h-full min-h-[280px] flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 bg-white/40 px-6 py-10 text-center">
-        <MessageSquareText className="mb-4 h-10 w-10 text-primary" />
-        <h3 className="text-lg font-semibold text-foreground">Ask about your spending</h3>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          Questions are answered from your actual expense data through a safe function layer, not raw model guesses.
-        </p>
-      </div>
+      <EmptyState description="Ask about merchants, categories, trends, or whether a purchase fits. Answers use your actual expense data." icon={MessageSquareText} title="Start with a money question" />
     ),
     [],
   );
@@ -121,16 +119,14 @@ export function ChatPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">Restoring session...</p>
-      </main>
+      <AppShell title="AI Chat"><PageSkeleton /></AppShell>
     );
   }
 
   if (!user) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
-        <Card className="w-full max-w-xl border-white/70 bg-white/90 backdrop-blur">
+        <Card className="w-full max-w-xl">
           <CardHeader>
             <CardTitle>Chat with your finances</CardTitle>
             <CardDescription>
@@ -151,27 +147,13 @@ export function ChatPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fef3c7,transparent_35%),linear-gradient(180deg,#fff7ed_0%,#f8fafc_100%)] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <div className="flex flex-col gap-4 rounded-[32px] border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.24em] text-amber-600">
-                Spending Q&A
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold text-slate-900">Chat with your money</h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Ask natural questions about trends, merchants, categories, and whether your current spending still leaves room for savings.
-              </p>
-            </div>
-            <DashboardNav />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
+    <AppShell description="Ask natural questions. Every answer is grounded in your expense data." eyebrow="Grounded answers" title="Chat with your money">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+        <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map((suggestion) => (
               <button
                 key={suggestion}
-                className="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900 transition hover:bg-amber-100"
+                className="rounded-full border border-border/70 bg-card px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition hover:-translate-y-px hover:border-primary/25 hover:text-foreground"
                 onClick={() => void submitMessage(suggestion)}
                 type="button"
               >
@@ -181,13 +163,15 @@ export function ChatPage() {
                 </span>
               </button>
             ))}
-          </div>
         </div>
 
-        <Card className="border-white/70 bg-white/85 shadow-sm backdrop-blur">
-          <CardContent className="flex flex-col gap-4 p-4 sm:p-6">
-            <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
-              {messages.length === 0 ? (
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border/50 px-5 py-4 sm:px-6">
+            <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-accent text-primary"><Bot className="h-5 w-5" /></span><div><p className="text-sm font-semibold">Ledger assistant</p><p className="flex items-center gap-1 text-[11px] text-muted-foreground"><ShieldCheck className="h-3 w-3" />Grounded in your data</p></div></div>
+          </div>
+          <CardContent className="flex min-h-[620px] flex-col p-0 sm:p-0">
+            <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8">
+              {historyLoading ? <div className="space-y-4"><Skeleton className="h-16 w-3/5 rounded-2xl" /><Skeleton className="ml-auto h-14 w-2/5 rounded-2xl" /><Skeleton className="h-20 w-4/5 rounded-2xl" /></div> : messages.length === 0 ? (
                 emptyState
               ) : (
                 messages.map((message) => (
@@ -196,10 +180,10 @@ export function ChatPage() {
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[75%] ${
+                      className={`max-w-[88%] px-4 py-3 text-sm leading-6 sm:max-w-[72%] ${
                         message.role === 'user'
-                          ? 'bg-slate-900 text-white'
-                          : 'border border-amber-100 bg-amber-50 text-slate-900'
+                          ? 'rounded-[20px_20px_5px_20px] bg-primary text-primary-foreground'
+                          : 'rounded-[20px_20px_20px_5px] bg-secondary/70 text-foreground'
                       }`}
                     >
                       {message.content}
@@ -207,32 +191,20 @@ export function ChatPage() {
                   </div>
                 ))
               )}
+              {submitting ? <div className="flex justify-start"><div className="flex items-center gap-1 rounded-[20px_20px_20px_5px] bg-secondary/70 px-5 py-4">{[0, 1, 2].map((item) => <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground" key={item} style={{ animationDelay: `${item * 140}ms` }} />)}</div></div> : null}
             </div>
 
-            <form className="space-y-3" onSubmit={handleSubmit}>
-              <Input
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Ask something like: Compare food spending this month with last month"
-                value={input}
-              />
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-h-5 text-sm text-red-600">{error}</div>
-                <Button disabled={submitting || !input.trim() || !conversationId} type="submit">
-                  {submitting ? (
-                    <span className="inline-flex items-center gap-2">
-                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                      Thinking...
-                    </span>
-                  ) : (
-                    'Send'
-                  )}
-                </Button>
+            <form className="border-t border-border/50 bg-raised p-3 sm:p-4" onSubmit={handleSubmit}>
+              {error ? <div className="mb-3 rounded-xl bg-danger/10 p-3 text-sm text-danger">{error}</div> : null}
+              <div className="flex items-center gap-2 rounded-2xl border border-input bg-card p-1.5 shadow-sm focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-ring/10">
+                <Input className="h-11 flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0" onChange={(event) => setInput(event.target.value)} placeholder="Ask about your spending..." value={input} />
+                <Button className="h-10 w-10 shrink-0 px-0" disabled={submitting || !input.trim() || !conversationId} type="submit"><Send className="h-4 w-4" /></Button>
               </div>
             </form>
           </CardContent>
         </Card>
       </div>
-    </main>
+    </AppShell>
   );
 }
 

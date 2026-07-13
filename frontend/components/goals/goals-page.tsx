@@ -2,17 +2,21 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { ArrowUpRight, PiggyBank, Plus, Target } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
-import { DashboardNav } from '@/components/dashboard/dashboard-nav';
+import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
+import { MoneyDisplay } from '@/components/ui/money-display';
+import { PageSkeleton, Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { api } from '@/lib/api';
 import { GoalRecord } from '@/lib/goals-types';
 
 export function GoalsPage() {
-  const { user, logout, loading } = useAuth();
+  const { loading } = useAuth();
   const [goals, setGoals] = useState<GoalRecord[]>([]);
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -64,38 +68,18 @@ export function GoalsPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">Restoring session...</p>
-      </main>
+      <AppShell title="Savings goals"><PageSkeleton /></AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(34,197,94,0.14),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.65),rgba(244,247,242,1))] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <DashboardNav />
-            <div>
-              <h1 className="text-3xl font-semibold">Savings goals</h1>
-              <p className="text-sm text-muted-foreground">
-                Track progress, log contributions, and get one concrete AI suggestion to reach each target faster.
-              </p>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-medium">{user?.name}</p>
-            <button className="text-muted-foreground underline underline-offset-4" onClick={() => logout()} type="button">
-              Logout
-            </button>
-          </div>
-        </div>
-
-        <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card className="border-white/60 bg-white/90 shadow-lg">
+    <AppShell description="Turn long-term plans into visible, measurable progress." eyebrow="Save with purpose" title="Savings goals">
+      <section className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+          <Card className="h-fit xl:sticky xl:top-8">
             <CardHeader>
-              <CardTitle>Create goal</CardTitle>
-              <CardDescription>Add a target you want to fund over time.</CardDescription>
+              <div className="mb-2 grid h-11 w-11 place-items-center rounded-xl bg-accent text-primary"><Target className="h-5 w-5" /></div>
+              <CardTitle className="font-display text-2xl">Create a goal</CardTitle>
+              <CardDescription>Give the next thing you’re saving for a clear target.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -105,61 +89,55 @@ export function GoalsPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Target amount</label>
-                  <Input onChange={(event) => setTargetAmount(event.target.value)} value={targetAmount} />
+                  <Input className="money-figures" onChange={(event) => setTargetAmount(event.target.value)} placeholder="₹0" value={targetAmount} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Current amount</label>
-                  <Input onChange={(event) => setCurrentAmount(event.target.value)} value={currentAmount} />
+                  <Input className="money-figures" onChange={(event) => setCurrentAmount(event.target.value)} placeholder="₹0" value={currentAmount} />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Target date</label>
                 <Input onChange={(event) => setTargetDate(event.target.value)} type="date" value={targetDate} />
               </div>
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
-              <Button disabled={status === 'saving'} onClick={() => void createGoal()} type="button">
-                {status === 'saving' ? 'Saving...' : 'Create goal'}
+              {error ? <p className="rounded-xl bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
+              <Button className="w-full" disabled={status === 'saving'} onClick={() => void createGoal()} size="lg" type="button">
+                <Plus className="h-4 w-4" />{status === 'saving' ? 'Creating...' : 'Create goal'}
               </Button>
             </CardContent>
           </Card>
 
           <div className="space-y-4">
+            {status === 'loading' && goals.length === 0 ? [0, 1, 2].map((item) => <Skeleton className="h-44 rounded-2xl" key={item} />) : null}
             {goals.length === 0 && status !== 'loading' ? (
-              <Card className="border-white/60 bg-white/90 shadow-lg">
-                <CardContent className="p-6 text-sm text-muted-foreground">
-                  No goals yet. Create your first savings target to start tracking progress.
-                </CardContent>
-              </Card>
+              <Card><EmptyState description="Create a target and every contribution will turn into visible momentum." icon={PiggyBank} title="Your first goal starts here" /></Card>
             ) : null}
             {goals.map((goal) => (
               <Link href={`/goals/${goal.id}`} key={goal.id}>
-                <Card className="border-white/60 bg-white/90 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl">
+                <Card className="group hover:-translate-y-0.5 hover:border-primary/15 hover:shadow-lift">
                   <CardContent className="space-y-4 p-6">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h2 className="text-xl font-semibold">{goal.name}</h2>
-                        <p className="text-sm text-muted-foreground">
-                          Saved Rs. {goal.currentAmount.toFixed(0)} of Rs. {goal.targetAmount.toFixed(0)}
-                        </p>
+                        <h2 className="font-display text-2xl">{goal.name}</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">Saved <MoneyDisplay amount={goal.currentAmount} /> of <MoneyDisplay amount={goal.targetAmount} /></p>
                       </div>
                       <div className="text-right text-sm">
                         <p className="font-medium">{goal.progress.toFixed(0)}%</p>
-                        <p className="text-muted-foreground">Remaining Rs. {goal.remainingAmount.toFixed(0)}</p>
+                        <p className="text-muted-foreground"><MoneyDisplay amount={goal.remainingAmount} /> left</p>
                       </div>
                     </div>
                     <Progress value={goal.progress} />
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <span>{goal.targetDate ? `Target ${formatDate(goal.targetDate)}` : 'No target date set'}</span>
-                      <span>Open details</span>
+                      <span className="flex items-center gap-1 font-semibold text-foreground">Open details <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span>
                     </div>
                   </CardContent>
                 </Card>
               </Link>
             ))}
           </div>
-        </section>
-      </div>
-    </main>
+      </section>
+    </AppShell>
   );
 }
 

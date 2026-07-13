@@ -37,7 +37,7 @@ export function CategoryPicker({
     !categories.some((category) => category.name.toLowerCase() === query.trim().toLowerCase());
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/80 bg-white/70 p-4">
+    <div className="space-y-3 rounded-2xl bg-secondary/40 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium">Category</p>
         {value ? (
@@ -60,7 +60,7 @@ export function CategoryPicker({
         {filtered.map((category) => (
           <button
             key={category.id}
-            className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
+            className={`flex w-full items-center justify-between rounded-[10px] px-3 py-2.5 text-left text-sm font-medium transition ${
               value?.id === category.id ? 'bg-primary text-primary-foreground' : 'bg-secondary/70 hover:bg-secondary'
             }`}
             disabled={disabled}

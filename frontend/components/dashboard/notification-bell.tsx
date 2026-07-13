@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Check, Inbox } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
@@ -74,35 +74,33 @@ export function NotificationBell() {
     <div className="relative">
       <button
         aria-label="Notifications"
-        className="relative rounded-full bg-white/80 p-2 text-foreground transition hover:bg-white"
+        className="relative grid h-10 w-10 place-items-center rounded-[10px] text-muted-foreground transition hover:bg-secondary hover:text-foreground active:scale-95"
         onClick={() => setOpen((current) => !current)}
         type="button"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white ring-2 ring-card">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-20 mt-3 w-80 rounded-2xl border border-border/70 bg-white p-3 shadow-xl">
+        <div className="fixed inset-x-3 top-16 z-[80] mt-3 rounded-3xl border border-border/60 bg-card p-3 shadow-lift sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:w-96">
           <div className="mb-3 flex items-center justify-between">
-            <p className="font-medium">Notifications</p>
+            <div><p className="font-display text-xl">Notifications</p><p className="text-xs text-muted-foreground">{unreadCount} unread</p></div>
             <Button className="h-8 px-3 py-1 text-xs" onClick={() => setOpen(false)} type="button" variant="secondary">
               Close
             </Button>
           </div>
           <div className="max-h-96 space-y-2 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="rounded-xl bg-secondary/30 p-3 text-sm text-muted-foreground">
-                No notifications yet.
-              </p>
+              <div className="flex flex-col items-center px-4 py-10 text-center"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-accent text-primary"><Inbox className="h-5 w-5" /></span><p className="mt-3 text-sm font-semibold">All quiet</p><p className="mt-1 text-xs text-muted-foreground">New budget and recurring alerts will appear here.</p></div>
             ) : (
               notifications.map((item) => (
                 <div
-                  className={`rounded-xl border p-3 ${item.isRead ? 'border-border/60 bg-secondary/10' : 'border-amber-200 bg-amber-50'}`}
+                  className={`rounded-2xl p-3.5 ${item.isRead ? 'bg-secondary/25' : 'bg-accent/70'}`}
                   key={item.id}
                 >
                   <p className="text-sm font-medium">{item.message}</p>
@@ -110,7 +108,7 @@ export function NotificationBell() {
                     <p className="text-xs text-muted-foreground">{formatDateTime(item.createdAt)}</p>
                     {!item.isRead ? (
                       <Button className="h-8 px-3 py-1 text-xs" onClick={() => void markAsRead(item.id)} type="button" variant="outline">
-                        Mark read
+                        <Check className="h-3 w-3" />Mark read
                       </Button>
                     ) : null}
                   </div>

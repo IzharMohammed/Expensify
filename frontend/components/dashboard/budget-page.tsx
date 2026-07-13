@@ -1,19 +1,20 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/components/auth/auth-provider';
-import { DashboardNav } from '@/components/dashboard/dashboard-nav';
+import { CircleGauge, Landmark, Save } from 'lucide-react';
+import { AppShell } from '@/components/layout/app-shell';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { MoneyDisplay } from '@/components/ui/money-display';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { BudgetListResponse, BudgetRow } from '@/lib/dashboard-types';
 
 type BudgetDraftMap = Record<string, string>;
 
 export function BudgetPage() {
-  const { user, logout } = useAuth();
   const month = currentMonth();
   const [budgetData, setBudgetData] = useState<BudgetListResponse | null>(null);
   const [drafts, setDrafts] = useState<BudgetDraftMap>({});
@@ -85,43 +86,33 @@ export function BudgetPage() {
     return { spent, budgeted };
   }, [budgetData]);
 
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.62),rgba(245,247,243,1))] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <DashboardNav />
-            <div>
-              <h1 className="text-3xl font-semibold">Monthly budgets</h1>
-              <p className="text-sm text-muted-foreground">
-                Set income and per-category caps for {month}.
-              </p>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-medium">{user?.name}</p>
-            <button className="text-muted-foreground underline underline-offset-4" onClick={() => logout()} type="button">
-              Logout
-            </button>
-          </div>
-        </div>
+  const remaining = (budgetData?.income ?? 0) - totals.spent;
 
-        <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card className="border-white/60 bg-white/88 shadow-lg">
+  return (
+    <AppShell description={`Set your income and category limits for ${month}.`} eyebrow="Plan" title="Monthly budgets">
+      <div className="space-y-6 sm:space-y-8">
+        <section className="grid overflow-hidden rounded-3xl bg-primary text-primary-foreground sm:grid-cols-3">
+          <BudgetHeroMetric icon={Landmark} label="Monthly income" value={budgetData?.income ?? 0} loading={status === 'loading'} />
+          <BudgetHeroMetric icon={CircleGauge} label="Budgeted" value={totals.budgeted} loading={status === 'loading'} />
+          <BudgetHeroMetric icon={CircleGauge} label="Remaining after spend" value={remaining} loading={status === 'loading'} />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
+          <Card className="h-fit xl:sticky xl:top-8">
             <CardHeader>
-              <CardTitle>Setup</CardTitle>
-              <CardDescription>Enter salary and category caps for this month.</CardDescription>
+              <CardTitle className="font-display text-2xl">Set your plan</CardTitle>
+              <CardDescription>Enter income and the amount you want available to each category.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Monthly income</label>
-                <Input onChange={(event) => setIncome(event.target.value)} value={income} />
+                <label className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Monthly income</label>
+                <div className="relative"><span className="absolute left-3.5 top-3 text-sm text-muted-foreground">₹</span><Input className="pl-8 money-figures" onChange={(event) => setIncome(event.target.value)} value={income} /></div>
               </div>
 
               <div className="space-y-3">
                 {budgetData?.budgets.map((budget) => (
                   <div key={budget.categoryId} className="grid gap-2 sm:grid-cols-[1fr_180px] sm:items-center">
-                    <label className="text-sm font-medium">{budget.categoryName}</label>
+                    <label className="text-sm font-semibold">{budget.categoryName}</label>
                     <Input
                       onChange={(event) =>
                         setDrafts((current) => ({
@@ -129,40 +120,37 @@ export function BudgetPage() {
                           [budget.categoryId]: event.target.value,
                         }))
                       }
-                      placeholder="0"
+                      className="money-figures"
+                      placeholder="₹0"
                       value={drafts[budget.categoryId] ?? ''}
                     />
                   </div>
                 ))}
               </div>
 
-              {error ? <p className="text-sm text-red-600">{error}</p> : null}
+              {error ? <p className="rounded-xl bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
 
-              <Button disabled={status === 'saving' || status === 'loading'} onClick={() => void saveBudgets()} type="button">
-                {status === 'saving' ? 'Saving...' : 'Save budgets'}
+              <Button className="w-full" disabled={status === 'saving' || status === 'loading'} onClick={() => void saveBudgets()} size="lg" type="button">
+                <Save className="h-4 w-4" />{status === 'saving' ? 'Saving plan...' : 'Save monthly plan'}
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="border-white/60 bg-white/88 shadow-lg">
+          <Card>
             <CardHeader>
-              <CardTitle>Progress</CardTitle>
-              <CardDescription>
-                Budgeted Rs. {totals.budgeted.toFixed(0)} · Spent Rs. {totals.spent.toFixed(0)}
-              </CardDescription>
+              <CardTitle className="font-display text-2xl">Category pacing</CardTitle>
+              <CardDescription>How this month’s spending compares with your plan.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {budgetData?.budgets.map((budget) => (
                 <BudgetProgressRow key={budget.categoryId} budget={budget} />
               ))}
-              {!budgetData && status === 'loading' ? (
-                <p className="text-sm text-muted-foreground">Loading budgets...</p>
-              ) : null}
+              {!budgetData && status === 'loading' ? [0, 1, 2, 3].map((item) => <Skeleton className="h-24 rounded-2xl" key={item} />) : null}
             </CardContent>
           </Card>
         </section>
       </div>
-    </main>
+    </AppShell>
   );
 }
 
@@ -171,23 +159,29 @@ function BudgetProgressRow({ budget }: { budget: BudgetRow }) {
   const indicatorClassName =
     budget.percentage >= 80
       ? budget.percentage >= 100
-        ? 'bg-red-500'
-        : 'bg-amber-500'
-      : 'bg-emerald-500';
+        ? 'bg-danger'
+        : 'bg-warning'
+      : 'bg-success';
 
   return (
-    <div className="space-y-2 rounded-xl border border-border/70 bg-secondary/30 p-4">
+    <div className="group space-y-3 rounded-2xl bg-secondary/35 p-4 transition-colors hover:bg-secondary/55 sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="font-medium">{budget.categoryName}</p>
-          <p className="text-sm text-muted-foreground">
-            Spent Rs. {budget.spent.toFixed(0)}
-            {budget.budgetAmount ? ` of Rs. ${budget.budgetAmount.toFixed(0)}` : ' · No budget set'}
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Spent <MoneyDisplay amount={budget.spent} />{budget.budgetAmount ? <> of <MoneyDisplay amount={budget.budgetAmount} /></> : ' · No budget set'}</p>
         </div>
         <p className="text-sm font-medium">{budget.budgetAmount ? `${budget.percentage.toFixed(0)}%` : '--'}</p>
       </div>
       <Progress indicatorClassName={indicatorClassName} value={percentage} />
+    </div>
+  );
+}
+
+function BudgetHeroMetric({ icon: Icon, label, value, loading }: { icon: typeof Landmark; label: string; value: number; loading: boolean }) {
+  return (
+    <div className="border-b border-primary-foreground/10 p-6 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0 sm:p-7">
+      <div className="flex items-center gap-2 text-primary-foreground/60"><Icon className="h-4 w-4" /><p className="text-[11px] font-bold uppercase tracking-[0.15em]">{label}</p></div>
+      {loading ? <Skeleton className="mt-4 h-10 w-36 bg-primary-foreground/10" /> : <MoneyDisplay amount={value} className="mt-3 block font-display text-3xl sm:text-4xl" />}
     </div>
   );
 }

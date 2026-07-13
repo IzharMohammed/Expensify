@@ -6,8 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { getApiErrorMessage, useAuth } from '@/components/auth/auth-provider';
+import { AuthShell } from '@/components/auth/auth-shell';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -47,13 +47,8 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-md border-white/70 bg-white/90 backdrop-blur">
-        <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>Sign in with email/password or continue with Google.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <AuthShell description="Sign in to continue to your financial workspace." title="Welcome back.">
+        <div className="space-y-5">
           <Form {...form}>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
               <FormField
@@ -83,14 +78,14 @@ export default function LoginPage() {
                 )}
               />
               <FormMessage>{form.formState.errors.root?.message}</FormMessage>
-              <Button className="w-full" disabled={form.formState.isSubmitting} type="submit">
-                Sign in
+              <Button className="w-full" disabled={form.formState.isSubmitting} size="lg" type="submit">
+                {form.formState.isSubmitting ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
           </Form>
 
           <a href={GOOGLE_AUTH_URL} className="block">
-            <Button className="w-full" variant="outline">
+            <Button className="w-full" size="lg" variant="outline">
               Continue with Google
             </Button>
           </a>
@@ -101,8 +96,7 @@ export default function LoginPage() {
               Create one
             </Link>
           </p>
-        </CardContent>
-      </Card>
-    </main>
+        </div>
+    </AuthShell>
   );
 }

@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LoaderCircle, Plus, Search, SlidersHorizontal, Tag, X } from 'lucide-react';
+import { LoaderCircle, Plus, ReceiptText, Search, SlidersHorizontal, Tag, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MoneyDisplay } from '@/components/ui/money-display';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { Category, ExpenseRecord, ExpenseTag } from '@/lib/expense-types';
 
@@ -124,28 +127,28 @@ export function ExpenseSearch(props: {
     filters.tagIds.length;
 
   return (
-    <Card className="border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,248,240,0.96))] shadow-xl">
+    <Card>
       <CardHeader className="gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <CardTitle>Search your expenses</CardTitle>
+          <CardTitle className="font-display text-2xl">Your ledger</CardTitle>
           <CardDescription>
             Search merchants and notes, combine filters, and organize entries with tags.
           </CardDescription>
         </div>
-        <div className="text-sm text-muted-foreground">{total} matching expenses</div>
+        <div className="rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-muted-foreground">{total} entries</div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 rounded-2xl bg-secondary/45 p-2 sm:flex-row">
           <label className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="border-0 bg-card pl-9 shadow-sm"
               onChange={(event) => patchFilters({ q: event.target.value })}
               placeholder="Search merchant or note"
               value={filters.q}
             />
           </label>
-          <Button onClick={() => setShowFilters((current) => !current)} type="button" variant="outline">
+          <Button className="border-0" onClick={() => setShowFilters((current) => !current)} type="button" variant="secondary">
             <SlidersHorizontal className="mr-2 h-4 w-4" />
             Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
           </Button>
@@ -165,19 +168,15 @@ export function ExpenseSearch(props: {
         ) : null}
 
         {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+          <div className="rounded-xl border border-danger/15 bg-danger/10 p-3 text-sm text-danger">{error}</div>
         ) : null}
 
         <div className="relative space-y-3">
           {loading ? (
-            <div className="absolute inset-0 z-10 flex items-start justify-center rounded-2xl bg-white/65 pt-8 backdrop-blur-[1px]">
-              <LoaderCircle className="h-5 w-5 animate-spin" />
-            </div>
+            <div className="absolute inset-0 z-10 space-y-3 rounded-2xl bg-card/80 backdrop-blur-sm">{[0, 1, 2].map((item) => <Skeleton className="h-24 rounded-2xl" key={item} />)}</div>
           ) : null}
           {!loading && expenses.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No expenses match these filters.
-            </div>
+            <EmptyState description="Try removing a filter or search for a different merchant or note." icon={ReceiptText} title="No matching expenses" />
           ) : null}
           {expenses.map((expense) => (
             <ExpenseRow
@@ -215,7 +214,7 @@ function FilterPanel(props: {
 }) {
   const { filters } = props;
   return (
-    <div className="grid gap-5 rounded-2xl border bg-white/70 p-4 md:grid-cols-2">
+    <div className="grid gap-5 rounded-2xl border border-border/55 bg-raised p-4 md:grid-cols-2">
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">Amount range</p>
@@ -254,7 +253,7 @@ function FilterPanel(props: {
         <div className="relative h-6">
           <input
             aria-label="Minimum amount"
-            className="absolute inset-x-0 top-1 w-full accent-orange-600"
+            className="absolute inset-x-0 top-1 w-full accent-primary"
             max={AMOUNT_CEILING}
             min="0"
             onChange={(event) =>
@@ -269,7 +268,7 @@ function FilterPanel(props: {
           />
           <input
             aria-label="Maximum amount"
-            className="absolute inset-x-0 top-3 w-full accent-slate-900"
+            className="absolute inset-x-0 top-3 w-full accent-primary"
             max={AMOUNT_CEILING}
             min="0"
             onChange={(event) =>
@@ -337,8 +336,8 @@ function FilterChips(props: {
           <button
             className={`rounded-full border px-3 py-1 text-xs capitalize transition ${
               props.selected.includes(option.id)
-                ? 'border-slate-900 bg-slate-900 text-white'
-                : 'bg-white hover:border-slate-400'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'bg-card hover:border-primary/30'
             }`}
             key={option.id}
             onClick={() => props.onToggle(option.id)}
@@ -400,7 +399,7 @@ function ExpenseRow(props: {
   }
 
   return (
-    <article className="rounded-2xl border border-border/70 bg-white/80 p-4 text-sm">
+    <article className="group rounded-2xl border border-border/55 bg-card p-4 text-sm transition hover:border-primary/15 hover:shadow-soft sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium">{props.expense.merchant}</p>
@@ -411,16 +410,16 @@ function ExpenseRow(props: {
           </div>
           {props.expense.note ? <p className="mt-2 text-xs text-muted-foreground">{props.expense.note}</p> : null}
         </div>
-        <p className="whitespace-nowrap text-base font-semibold">Rs. {props.expense.amount}</p>
+        <MoneyDisplay amount={props.expense.amount} className="whitespace-nowrap text-base font-bold" decimals={2} />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {(props.expense.tags ?? []).map((tag) => (
-          <span className="inline-flex items-center rounded-full bg-orange-100 text-xs text-orange-900" key={tag.id}>
+          <span className="inline-flex items-center rounded-full bg-accent text-xs text-accent-foreground" key={tag.id}>
             <button className="px-2.5 py-1" onClick={() => props.onTagFilter(tag)} type="button">#{tag.name}</button>
             <button
               aria-label={`Remove ${tag.name} tag`}
-              className="border-l border-orange-200 px-1.5 py-1 hover:bg-orange-200"
+              className="border-l border-primary/10 px-1.5 py-1 hover:bg-primary/10"
               disabled={saving}
               onClick={() => void removeTag(tag.id)}
               type="button"
@@ -464,7 +463,7 @@ function ExpenseRow(props: {
             </Button>
           </div>
           {suggestions.length ? (
-            <div className="absolute z-20 mt-1 w-full rounded-xl border bg-white p-1 shadow-lg">
+            <div className="absolute z-20 mt-1 w-full rounded-xl border bg-card p-1 shadow-lift">
               {suggestions.slice(0, 6).map((tag) => (
                 <button className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-secondary" key={tag.id} onClick={() => void addTag(tag)} type="button">
                   #{tag.name}
@@ -472,7 +471,7 @@ function ExpenseRow(props: {
               ))}
             </div>
           ) : null}
-          {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+          {error ? <p className="mt-1 text-xs text-danger">{error}</p> : null}
         </div>
       ) : null}
     </article>

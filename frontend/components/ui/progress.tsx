@@ -12,9 +12,9 @@ export function Progress({
   const normalized = Math.max(0, Math.min(100, value));
 
   return (
-    <div className={cn('relative h-3 w-full overflow-hidden rounded-full bg-secondary', className)}>
+    <div className={cn('relative h-2 w-full overflow-hidden rounded-full bg-secondary', className)}>
       <div
-        className={cn('h-full rounded-full transition-all', indicatorClassName)}
+        className={cn('h-full rounded-full bg-primary transition-all duration-700 ease-out', indicatorClassName)}
         style={{ width: `${normalized}%` }}
       />
     </div>

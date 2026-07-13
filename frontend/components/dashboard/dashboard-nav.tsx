@@ -28,7 +28,7 @@ export function DashboardNav() {
               'rounded-full px-4 py-2 text-sm font-medium transition',
               pathname === link.href
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-white/80 text-foreground hover:bg-white',
+                : 'bg-card text-foreground hover:bg-secondary',
             )}
             href={link.href}
           >

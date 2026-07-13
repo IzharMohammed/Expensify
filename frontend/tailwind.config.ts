@@ -35,11 +35,23 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        success: 'hsl(var(--success))',
+        warning: 'hsl(var(--warning))',
+        danger: 'hsl(var(--danger))',
+        raised: 'hsl(var(--surface-raised))',
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      fontFamily: {
+        sans: ['Manrope Variable', 'sans-serif'],
+        display: ['DM Serif Display', 'Georgia', 'serif'],
+      },
+      boxShadow: {
+        soft: '0 1px 2px rgba(21, 32, 28, 0.04), 0 12px 36px rgba(21, 32, 28, 0.06)',
+        lift: '0 2px 4px rgba(21, 32, 28, 0.05), 0 18px 50px rgba(21, 32, 28, 0.1)',
       },
     },
   },

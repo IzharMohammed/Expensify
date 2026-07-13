@@ -2,12 +2,12 @@
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Mic, Paperclip, LoaderCircle } from 'lucide-react';
+import { ArrowRight, Check, LoaderCircle, Mic, Paperclip, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 import { BudgetAlertToast } from '@/components/dashboard/budget-alert-toast';
-import { DashboardNav } from '@/components/dashboard/dashboard-nav';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
 import { InsightsPanel } from '@/components/insights/insights-panel';
+import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,10 +31,10 @@ type DashboardState = {
 };
 
 const DEFAULT_ICONS = ['Wallet', 'Tag', 'CircleDollarSign', 'BadgeIndianRupee'];
-const DEFAULT_COLORS = ['#2563EB', '#16A34A', '#D97706', '#7C3AED', '#DB2777'];
+const DEFAULT_COLORS = ['#32705B', '#C2883B', '#B45F4D', '#477F88', '#7C7652', '#D08B72'];
 
 export function ExpenseDashboard() {
-  const { accessToken, logout, user } = useAuth();
+  const { accessToken, user } = useAuth();
   const [state, setState] = useState<DashboardState>({
     categories: [],
     expenses: [],
@@ -45,6 +45,7 @@ export function ExpenseDashboard() {
     summary: null,
   });
   const [alerts, setAlerts] = useState<Array<BudgetAlert & { id: string }>>([]);
+  const [savedMerchant, setSavedMerchant] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -143,6 +144,7 @@ export function ExpenseDashboard() {
       });
 
       const expense = response.data.expense as ExpenseRecord;
+      setSavedMerchant(expense.merchant);
       setState((current) => ({
         ...current,
         expenses: [expense, ...current.expenses],
@@ -247,6 +249,12 @@ export function ExpenseDashboard() {
     !!state.preview?.amount && Number(state.preview.amount) > 0 && !!state.preview.category?.id;
 
   useEffect(() => {
+    if (!savedMerchant) return;
+    const timeout = window.setTimeout(() => setSavedMerchant(null), 2600);
+    return () => window.clearTimeout(timeout);
+  }, [savedMerchant]);
+
+  useEffect(() => {
     if (!user || !accessToken) {
       return;
     }
@@ -274,30 +282,17 @@ export function ExpenseDashboard() {
   }, [accessToken, user]);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.22),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.58),rgba(250,247,242,1))] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <DashboardNav />
-            <div>
-              <h1 className="text-3xl font-semibold">Live expense dashboard</h1>
-              <p className="text-sm text-muted-foreground">
-                Parse quickly, confirm deliberately, and watch the monthly summary update live.
-              </p>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-medium">{user?.name}</p>
-            <button
-              className="text-muted-foreground underline underline-offset-4"
-              onClick={() => logout()}
-              type="button"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
+    <AppShell
+      actions={(
+        <Link href="/budgets">
+          <Button variant="outline">Review budgets <ArrowRight className="h-4 w-4" /></Button>
+        </Link>
+      )}
+      description="A live view of what moved, what remains, and where your money is heading."
+      eyebrow="Overview"
+      title={`Hello${user?.name ? `, ${user.name.split(' ')[0]}` : ''}.`}
+    >
+      <div className="space-y-6 sm:space-y-8">
         <SummaryCards summary={state.summary} />
 
         {alerts.length ? (
@@ -314,43 +309,41 @@ export function ExpenseDashboard() {
           </div>
         ) : null}
 
-        <InsightsPanel />
-
         <section className="grid gap-6">
-          <Card className="border-white/60 bg-white/88 shadow-xl backdrop-blur">
+          <Card className="overflow-hidden border-border/50 bg-card">
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <CardTitle className="text-3xl">Quick expense capture</CardTitle>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                    <Sparkles className="h-3.5 w-3.5" /> Smart capture
+                  </div>
+                  <CardTitle className="font-display text-3xl sm:text-4xl">Add an expense</CardTitle>
                   <CardDescription>
-                    Type, speak, or upload a receipt. We parse first, you confirm second.
+                    Write it naturally, speak it, or scan the receipt. You always confirm before saving.
                   </CardDescription>
                 </div>
-                <Link className="text-sm text-muted-foreground underline underline-offset-4" href="/budgets">
-                  Manage budgets
-                </Link>
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
               <form className="space-y-3" onSubmit={handleParseSubmit}>
-                <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-secondary/40 p-3 md:flex-row">
+                <div className="flex flex-col gap-3 rounded-2xl bg-secondary/55 p-2.5 sm:p-3 md:flex-row">
                   <Input
-                    className="h-12 flex-1 border-0 bg-white/90 text-base shadow-sm"
+                    className="h-14 flex-1 border-0 bg-card px-4 text-base shadow-sm focus-visible:ring-2"
                     disabled={isBusy}
                     onChange={(event) =>
                       setState((current) => ({ ...current, entryText: event.target.value }))
                     }
-                    placeholder='Try "Swiggy 420", "makaan ka rent 15000 diya", or "Paid electricity bill 1850"'
+                    placeholder='Try “Swiggy 420” or “makaan ka rent 15000 diya”'
                     value={state.entryText}
                   />
-                  <div className="flex gap-2">
-                    <Button disabled={isBusy || !state.entryText.trim()} size="lg" type="submit">
-                      {state.status === 'parsing' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : 'Parse'}
+                  <div className="grid grid-cols-[1fr_auto_auto] gap-2 md:flex">
+                    <Button className="md:min-w-28" disabled={isBusy || !state.entryText.trim()} size="lg" type="submit">
+                      {state.status === 'parsing' ? <><LoaderCircle className="h-4 w-4 animate-spin" /> Reading</> : <>Review <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                     <Button
                       disabled={isBusy && state.status !== 'recording'}
                       onClick={() => void toggleRecording()}
-                      size="lg"
+                      className="h-12 w-12 px-0"
                       type="button"
                       variant={state.status === 'recording' ? 'default' : 'outline'}
                     >
@@ -359,7 +352,7 @@ export function ExpenseDashboard() {
                     <Button
                       disabled={isBusy}
                       onClick={() => fileInputRef.current?.click()}
-                      size="lg"
+                      className="h-12 w-12 px-0"
                       type="button"
                       variant="outline"
                     >
@@ -374,7 +367,7 @@ export function ExpenseDashboard() {
                     />
                   </div>
                 </div>
-                <div className="flex min-h-8 items-center gap-3 text-sm text-muted-foreground">
+                <div className="flex min-h-7 items-center gap-3 px-1 text-xs font-medium text-muted-foreground">
                   {state.status === 'recording' ? <WaveformIndicator /> : null}
                   {state.status === 'transcribing' ? 'Transcribing voice note...' : null}
                   {state.status === 'scanning' ? 'Reading receipt and extracting fields...' : null}
@@ -382,8 +375,15 @@ export function ExpenseDashboard() {
               </form>
 
               {state.error ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-xl border border-danger/15 bg-danger/10 px-4 py-3 text-sm text-danger">
                   {state.error}
+                </div>
+              ) : null}
+
+              {savedMerchant ? (
+                <div className="success-pop flex items-center gap-3 rounded-2xl bg-accent px-4 py-4 text-accent-foreground">
+                  <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground"><Check className="h-5 w-5" /></span>
+                  <div><p className="font-semibold">Expense added</p><p className="text-sm opacity-75">{savedMerchant} is now in your ledger.</p></div>
                 </div>
               ) : null}
 
@@ -424,11 +424,11 @@ export function ExpenseDashboard() {
               ) : null}
             </CardContent>
           </Card>
-
-          <ExpenseSearch categories={state.categories} initialExpenses={state.expenses} />
         </section>
+        <InsightsPanel />
+        <ExpenseSearch categories={state.categories} initialExpenses={state.expenses} />
       </div>
-    </main>
+    </AppShell>
   );
 }
 
@@ -446,10 +446,12 @@ function ConfirmationCard(props: {
   const { preview } = props;
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border/70 bg-[#fffaf3] p-5">
+    <>
+    <button aria-label="Close expense confirmation" className="fixed inset-0 z-[65] bg-foreground/25 backdrop-blur-sm md:hidden" onClick={props.onCancel} type="button" />
+    <div className="fixed inset-x-2 bottom-3 z-[70] max-h-[90vh] space-y-4 overflow-y-auto rounded-3xl border border-border/70 bg-card p-5 shadow-lift sm:inset-x-5 md:static md:max-h-none md:rounded-2xl md:shadow-soft">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold">Confirm parsed expense</h3>
+          <h3 className="font-display text-2xl">Confirm expense</h3>
           <p className="text-sm text-muted-foreground">
             Review before saving. Nothing is auto-saved.
           </p>
@@ -477,7 +479,7 @@ function ConfirmationCard(props: {
         <div className="space-y-2">
           <label className="text-sm font-medium">Payment method</label>
           <select
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex h-11 w-full rounded-[10px] border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-4 focus:ring-ring/10"
             onChange={(event) =>
               props.onPreviewChange({
                 paymentMethod:
@@ -523,7 +525,7 @@ function ConfirmationCard(props: {
       {preview.lineItems?.length ? (
         <div className="space-y-2">
           <p className="text-sm font-medium">Receipt line items</p>
-          <div className="rounded-xl border border-border/70 bg-white/70 p-3 text-sm">
+          <div className="rounded-xl border border-border/70 bg-raised p-3 text-sm">
             {preview.lineItems.map((item, index) => (
               <div className="flex items-center justify-between gap-3 py-1" key={`${item.name}-${index}`}>
                 <span>{item.name}</span>
@@ -553,6 +555,7 @@ function ConfirmationCard(props: {
         </Button>
       </div>
     </div>
+    </>
   );
 }
 

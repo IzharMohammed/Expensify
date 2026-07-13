@@ -2,17 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { ArrowLeft, Lightbulb, Plus, Sparkles, WalletCards } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
-import { DashboardNav } from '@/components/dashboard/dashboard-nav';
+import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { MoneyDisplay } from '@/components/ui/money-display';
+import { PageSkeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { api } from '@/lib/api';
 import { GoalContribution, GoalInsight, GoalRecord } from '@/lib/goals-types';
 
 export function GoalDetailPage({ goalId }: { goalId: string }) {
-  const { user, logout, loading } = useAuth();
+  const { loading } = useAuth();
   const [goal, setGoal] = useState<GoalRecord | null>(null);
   const [contributions, setContributions] = useState<GoalContribution[]>([]);
   const [insight, setInsight] = useState<GoalInsight | null>(null);
@@ -83,73 +86,49 @@ export function GoalDetailPage({ goalId }: { goalId: string }) {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">Restoring session...</p>
-      </main>
+      <AppShell title="Goal details"><PageSkeleton /></AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.14),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.7),rgba(243,246,251,1))] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <DashboardNav />
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Link className="underline underline-offset-4" href="/goals">
-                Goals
-              </Link>
-              <span>/</span>
-              <span>{goal?.name ?? 'Detail'}</span>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-medium">{user?.name}</p>
-            <button className="text-muted-foreground underline underline-offset-4" onClick={() => logout()} type="button">
-              Logout
-            </button>
-          </div>
-        </div>
-
+    <AppShell actions={<Link className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground" href="/goals"><ArrowLeft className="h-4 w-4" />All goals</Link>} description="Every contribution brings the finish line closer." eyebrow="Goal progress" title={goal?.name ?? 'Goal details'}>
+      <div className="space-y-6">
         <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-6">
-            <Card className="border-white/60 bg-white/90 shadow-lg">
+            <Card className="overflow-hidden bg-primary text-primary-foreground">
               <CardHeader>
-                <CardTitle>{goal?.name ?? 'Goal'}</CardTitle>
-                <CardDescription>
-                  {goal
-                    ? `Saved Rs. ${goal.currentAmount.toFixed(0)} of Rs. ${goal.targetAmount.toFixed(0)}`
-                    : 'Loading goal'}
-                </CardDescription>
+                <div className="flex items-center gap-2 text-primary-foreground/60"><WalletCards className="h-4 w-4" /><span className="text-xs font-bold uppercase tracking-[0.15em]">Saved so far</span></div>
+                {goal ? <MoneyDisplay amount={goal.currentAmount} className="font-display text-5xl" /> : null}
+                <CardDescription className="text-primary-foreground/60">of {goal ? <MoneyDisplay amount={goal.targetAmount} /> : 'your target'}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Progress value={goal?.progress ?? 0} />
+                <Progress className="bg-primary-foreground/15" indicatorClassName="bg-primary-foreground" value={goal?.progress ?? 0} />
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <Stat label="Remaining" value={goal ? `Rs. ${goal.remainingAmount.toFixed(0)}` : '--'} />
-                  <Stat label="Progress" value={goal ? `${goal.progress.toFixed(0)}%` : '--'} />
-                  <Stat label="Target date" value={goal?.targetDate ? formatDate(goal.targetDate) : 'Not set'} />
+                  <Stat label="Remaining" value={goal ? formatMoney(goal.remainingAmount) : '--'} inverted />
+                  <Stat label="Progress" value={goal ? `${goal.progress.toFixed(0)}%` : '--'} inverted />
+                  <Stat label="Target date" value={goal?.targetDate ? formatDate(goal.targetDate) : 'Not set'} inverted />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-white/60 bg-white/90 shadow-lg">
+            <Card>
               <CardHeader>
-                <CardTitle>Contribution history</CardTitle>
+                <CardTitle className="font-display text-2xl">Contribution history</CardTitle>
                 <CardDescription>Recent manual contributions toward this goal.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                <div className="flex h-52 items-end gap-3 overflow-x-auto rounded-2xl border border-border/70 bg-secondary/20 p-4">
+                <div className="flex h-56 items-end gap-3 overflow-x-auto rounded-2xl bg-secondary/35 p-4">
                   {chartData.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No contributions yet.</p>
                   ) : (
                     chartData.map((item) => (
                       <div className="flex min-w-16 flex-1 flex-col items-center gap-2" key={item.id}>
                         <div
-                          className="w-full rounded-t-2xl bg-gradient-to-t from-emerald-500 to-emerald-300"
+                          className="w-full rounded-t-[8px] bg-primary transition-all duration-700"
                           style={{ height: `${item.height}%` }}
                         />
                         <div className="text-center text-xs text-muted-foreground">
-                          <p className="font-medium text-foreground">Rs. {item.amount.toFixed(0)}</p>
+                          <p className="font-medium text-foreground">{formatMoney(item.amount)}</p>
                           <p>{formatShortDate(item.date)}</p>
                         </div>
                       </div>
@@ -159,9 +138,9 @@ export function GoalDetailPage({ goalId }: { goalId: string }) {
 
                 <div className="space-y-3">
                   {contributions.map((item) => (
-                    <div className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-white p-3" key={item.id}>
+                    <div className="flex items-start justify-between gap-3 rounded-xl border-b border-border/50 py-3 last:border-0" key={item.id}>
                       <div>
-                        <p className="font-medium">Rs. {item.amount.toFixed(0)}</p>
+                        <MoneyDisplay amount={item.amount} className="font-semibold" />
                         <p className="text-sm text-muted-foreground">{formatDate(item.date)}</p>
                       </div>
                       <p className="max-w-sm text-right text-sm text-muted-foreground">{item.note || 'No note'}</p>
@@ -173,40 +152,42 @@ export function GoalDetailPage({ goalId }: { goalId: string }) {
           </div>
 
           <div className="space-y-6">
-            <Card className="border-white/60 bg-white/90 shadow-lg">
+            <Card className="xl:sticky xl:top-8">
               <CardHeader>
-                <CardTitle>Add contribution</CardTitle>
+                <div className="mb-2 grid h-11 w-11 place-items-center rounded-xl bg-accent text-primary"><Plus className="h-5 w-5" /></div>
+                <CardTitle className="font-display text-2xl">Add contribution</CardTitle>
                 <CardDescription>Quickly log money already moved toward this goal.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Amount</label>
-                  <Input onChange={(event) => setAmount(event.target.value)} value={amount} />
+                  <Input className="money-figures" onChange={(event) => setAmount(event.target.value)} placeholder="₹0" value={amount} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Note</label>
                   <Input onChange={(event) => setNote(event.target.value)} value={note} />
                 </div>
-                {error ? <p className="text-sm text-red-600">{error}</p> : null}
-                <Button disabled={status === 'saving'} onClick={() => void addContribution()} type="button">
+                {error ? <p className="rounded-xl bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
+                <Button className="w-full" disabled={status === 'saving'} onClick={() => void addContribution()} size="lg" type="button">
                   {status === 'saving' ? 'Saving...' : 'Add contribution'}
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="border-white/60 bg-white/90 shadow-lg">
+            <Card className="border-warning/15 bg-[linear-gradient(145deg,hsl(var(--card)),hsl(var(--warning)/0.08))]">
               <CardHeader>
-                <CardTitle>AI suggestion</CardTitle>
+                <div className="flex items-center gap-2 text-warning"><Sparkles className="h-4 w-4" /><span className="text-xs font-bold uppercase tracking-[0.15em]">AI suggestion</span></div>
+                <CardTitle className="font-display text-2xl">A faster path</CardTitle>
                 <CardDescription>One focused cut that could move this goal forward faster.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                <p className="rounded-2xl bg-warning/10 p-4 text-sm leading-6 text-foreground">
                   {insight?.phrase ?? 'Loading suggestion...'}
                 </p>
                 {insight?.category ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Stat label="Suggested cut" value={insight.category} />
-                    <Stat label="Monthly reduction" value={`Rs. ${insight.monthlyCut.toFixed(0)}`} />
+                    <Stat label="Monthly reduction" value={formatMoney(insight.monthlyCut)} />
                   </div>
                 ) : null}
               </CardContent>
@@ -214,17 +195,21 @@ export function GoalDetailPage({ goalId }: { goalId: string }) {
           </div>
         </section>
       </div>
-    </main>
+    </AppShell>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, inverted = false }: { label: string; value: string; inverted?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-secondary/20 p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
+    <div className={inverted ? 'rounded-2xl bg-primary-foreground/10 p-4' : 'rounded-2xl bg-secondary/35 p-4'}>
+      <p className={inverted ? 'text-sm text-primary-foreground/60' : 'text-sm text-muted-foreground'}>{label}</p>
       <p className="mt-2 font-semibold">{value}</p>
     </div>
   );
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
 }
 
 function formatDate(value: string) {

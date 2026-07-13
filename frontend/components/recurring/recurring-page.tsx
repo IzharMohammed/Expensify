@@ -1,15 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CalendarClock, Check, Clock3, RotateCcw, X } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
-import { DashboardNav } from '@/components/dashboard/dashboard-nav';
+import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MoneyDisplay } from '@/components/ui/money-display';
+import { PageSkeleton, Skeleton } from '@/components/ui/skeleton';
 import { RecurringExpenseRecord, RecurringListResponse, RecurringReminder } from '@/lib/recurring-types';
 
 export function RecurringPage() {
-  const { user, logout, loading } = useAuth();
+  const { loading } = useAuth();
   const [confirmed, setConfirmed] = useState<RecurringExpenseRecord[]>([]);
   const [pending, setPending] = useState<RecurringExpenseRecord[]>([]);
   const [reminders, setReminders] = useState<RecurringReminder[]>([]);
@@ -62,46 +66,29 @@ export function RecurringPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">Restoring session...</p>
-      </main>
+      <AppShell title="Recurring expenses"><PageSkeleton /></AppShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.14),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.68),rgba(246,244,252,1))] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <DashboardNav />
-            <div>
-              <h1 className="text-3xl font-semibold">Recurring expenses</h1>
-              <p className="text-sm text-muted-foreground">
-                Review auto-detected subscriptions, track confirmed recurring payments, and see what renews tomorrow.
-              </p>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-medium">{user?.name}</p>
-            <button className="text-muted-foreground underline underline-offset-4" onClick={() => logout()} type="button">
-              Logout
-            </button>
-          </div>
+    <AppShell description="Keep predictable payments visible before they arrive." eyebrow="Subscriptions" title="Recurring expenses">
+      <div className="space-y-6">
+        <div className="relative overflow-hidden rounded-3xl bg-primary p-7 text-primary-foreground sm:p-9">
+          <div className="absolute -right-10 -top-16 h-48 w-48 rounded-full border border-primary-foreground/10" />
+          <div className="flex items-center gap-2 text-primary-foreground/60"><RotateCcw className="h-4 w-4" /><span className="text-[11px] font-bold uppercase tracking-[0.16em]">Monthly equivalent</span></div>
+          <MoneyDisplay amount={monthlyTotal} className="mt-3 block font-display text-5xl sm:text-6xl" />
+          <p className="mt-3 text-sm text-primary-foreground/60">Across all confirmed recurring expenses.</p>
         </div>
-
         <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <Card className="border-white/60 bg-white/90 shadow-lg">
+          <Card>
             <CardHeader>
-              <CardTitle>Confirmed subscriptions</CardTitle>
-              <CardDescription>
-                Monthly equivalent total Rs. {monthlyTotal.toFixed(0)}
-              </CardDescription>
+              <CardTitle className="font-display text-2xl">Confirmed payments</CardTitle>
+              <CardDescription>Subscriptions and recurring bills you have approved.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {status === 'loading' && confirmed.length === 0 ? [0, 1, 2].map((item) => <Skeleton className="h-24 rounded-2xl" key={item} />) : null}
               {confirmed.length === 0 && status !== 'loading' ? (
-                <p className="rounded-xl bg-secondary/40 p-4 text-sm text-muted-foreground">
-                  No confirmed recurring expenses yet.
-                </p>
+                <EmptyState description="Approved recurring payments will collect here with their next due date." icon={CalendarClock} title="Nothing recurring yet" />
               ) : null}
               {confirmed.map((item) => (
                 <RecurringRow item={item} key={item.id} />
@@ -110,26 +97,25 @@ export function RecurringPage() {
           </Card>
 
           <div className="space-y-6">
-            <Card className="border-white/60 bg-white/90 shadow-lg">
+            <Card>
               <CardHeader>
-                <CardTitle>Pending detections</CardTitle>
+                <CardTitle className="font-display text-2xl">Needs your review</CardTitle>
                 <CardDescription>Approve or reject what the pattern detector found.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {status === 'loading' && pending.length === 0 ? [0, 1].map((item) => <Skeleton className="h-32 rounded-2xl" key={item} />) : null}
                 {pending.length === 0 && status !== 'loading' ? (
-                  <p className="rounded-xl bg-secondary/40 p-4 text-sm text-muted-foreground">
-                    No pending detections right now.
-                  </p>
+                  <EmptyState className="py-8" description="When a repeating pattern is detected, it will wait here for your approval." icon={Check} title="You’re all caught up" />
                 ) : null}
                 {pending.map((item) => (
-                  <div className="space-y-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" key={item.id}>
+                  <div className="space-y-4 rounded-2xl border border-warning/20 bg-warning/10 p-4" key={item.id}>
                     <RecurringRow item={item} />
                     <div className="flex gap-3">
                       <Button disabled={status === 'saving'} onClick={() => void confirmDetection(item.id)} type="button">
-                        Confirm
+                        <Check className="h-4 w-4" />Confirm
                       </Button>
                       <Button disabled={status === 'saving'} onClick={() => void rejectDetection(item.id)} type="button" variant="outline">
-                        Reject
+                        <X className="h-4 w-4" />Reject
                       </Button>
                     </div>
                   </div>
@@ -137,19 +123,17 @@ export function RecurringPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-white/60 bg-white/90 shadow-lg">
+            <Card>
               <CardHeader>
-                <CardTitle>Tomorrow reminders</CardTitle>
+                <CardTitle className="font-display text-2xl">Due tomorrow</CardTitle>
                 <CardDescription>Daily generated notifications for upcoming renewals.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {reminders.length === 0 ? (
-                  <p className="rounded-xl bg-secondary/40 p-4 text-sm text-muted-foreground">
-                    No due reminders yet.
-                  </p>
+                  <EmptyState className="py-8" description="There are no confirmed renewals due tomorrow." icon={Clock3} title="A clear day ahead" />
                 ) : (
                   reminders.map((item) => (
-                    <div className="rounded-xl border border-border/70 bg-white p-4" key={item.id}>
+                    <div className="rounded-xl bg-secondary/45 p-4" key={item.id}>
                       <p className="font-medium">{item.message}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{formatDateTime(item.createdAt)}</p>
                     </div>
@@ -161,18 +145,16 @@ export function RecurringPage() {
         </section>
 
         {error ? (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
-          </Card>
+          <div className="rounded-2xl border border-danger/15 bg-danger/10 p-4 text-sm text-danger">{error}</div>
         ) : null}
       </div>
-    </main>
+    </AppShell>
   );
 }
 
 function RecurringRow({ item }: { item: RecurringExpenseRecord }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-secondary/20 p-4">
+    <div className="rounded-2xl bg-secondary/35 p-4 transition-colors hover:bg-secondary/55">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-lg font-semibold">{item.merchant}</p>
@@ -181,10 +163,8 @@ function RecurringRow({ item }: { item: RecurringExpenseRecord }) {
           </p>
         </div>
         <div className="text-right">
-          <p className="font-semibold">Rs. {item.amount.toFixed(0)}</p>
-          <p className="text-sm text-muted-foreground">
-            Monthly eq. Rs. {item.monthlyEquivalent.toFixed(0)}
-          </p>
+          <MoneyDisplay amount={item.amount} className="font-semibold" />
+          <p className="text-sm text-muted-foreground">Monthly eq. <MoneyDisplay amount={item.monthlyEquivalent} /></p>
         </div>
       </div>
     </div>

@@ -2,15 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/components/auth/auth-provider';
-import { DashboardNav } from '@/components/dashboard/dashboard-nav';
+import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
 import { InsightHistoryResponse, InsightRecord } from '@/lib/dashboard-types';
 import { InsightCard } from './insight-card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Lightbulb } from 'lucide-react';
 
 export function InsightHistoryPage() {
-  const { user, logout } = useAuth();
+  useAuth();
   const [items, setItems] = useState<InsightRecord[]>([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
@@ -55,41 +57,20 @@ export function InsightHistoryPage() {
   }, [items]);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.12),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.64),rgba(246,247,250,1))] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-3">
-            <DashboardNav />
-            <div>
-              <h1 className="text-3xl font-semibold">Insight history</h1>
-              <p className="text-sm text-muted-foreground">
-                Track how your spending behavior changes across days, weeks, and months.
-              </p>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <p className="font-medium">{user?.name}</p>
-            <button className="text-muted-foreground underline underline-offset-4" onClick={() => logout()} type="button">
-              Logout
-            </button>
-          </div>
-        </div>
-
-        <Card className="border-white/60 bg-white/90 shadow-lg">
+    <AppShell description="A chronological record of how your financial habits evolve." eyebrow="Behavior timeline" title="Insight history">
+        <Card>
           <CardHeader>
-            <CardTitle>Timeline</CardTitle>
+            <CardTitle className="font-display text-2xl">Your timeline</CardTitle>
             <CardDescription>Newest insights first.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? <p className="rounded-xl bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
             {grouped.length === 0 && !loading ? (
-              <p className="rounded-xl bg-secondary/50 p-4 text-sm text-muted-foreground">
-                No historical insights yet.
-              </p>
+              <EmptyState description="Your nightly insights will form a timeline here as your spending history grows." icon={Lightbulb} title="No history yet" />
             ) : null}
             {grouped.map(([date, records]) => (
               <section className="space-y-3" key={date}>
-                <h2 className="text-lg font-semibold">{formatDateHeading(date)}</h2>
+                <div className="flex items-center gap-3"><span className="h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-accent" /><h2 className="font-display text-xl">{formatDateHeading(date)}</h2></div>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {records.map((record) => (
                     <InsightCard insight={record} key={record.id} />
@@ -104,8 +85,7 @@ export function InsightHistoryPage() {
             ) : null}
           </CardContent>
         </Card>
-      </div>
-    </main>
+    </AppShell>
   );
 }
 
