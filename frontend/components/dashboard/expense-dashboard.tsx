@@ -18,6 +18,7 @@ import { BudgetAlert, DashboardSummary } from '@/lib/dashboard-types';
 import { Category, ExpensePreview, ExpenseRecord } from '@/lib/expense-types';
 
 import { CategoryPicker } from '../expenses/category-picker';
+import { ExpenseSearch } from '../expenses/expense-search';
 
 type DashboardState = {
   categories: Category[];
@@ -315,7 +316,7 @@ export function ExpenseDashboard() {
 
         <InsightsPanel />
 
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="grid gap-6">
           <Card className="border-white/60 bg-white/88 shadow-xl backdrop-blur">
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
@@ -424,36 +425,7 @@ export function ExpenseDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,240,0.94))] shadow-xl">
-            <CardHeader>
-              <CardTitle>Recent captured expenses</CardTitle>
-              <CardDescription>Last 10 confirmed entries from your account.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {state.expenses.length === 0 ? (
-                <p className="rounded-xl bg-secondary/60 p-4 text-sm text-muted-foreground">
-                  No expenses yet. Parse one from the input bar to start.
-                </p>
-              ) : (
-                state.expenses.map((expense) => (
-                  <div
-                    key={expense.id}
-                    className="rounded-xl border border-border/70 bg-white/70 px-4 py-3 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{expense.merchant}</p>
-                      <p className="font-semibold">Rs. {expense.amount}</p>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-3 text-muted-foreground">
-                      <span>{expense.date.slice(0, 10)}</span>
-                      <span className="capitalize">{expense.source}</span>
-                      {expense.paymentMethod ? <span className="capitalize">{expense.paymentMethod}</span> : null}
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <ExpenseSearch categories={state.categories} initialExpenses={state.expenses} />
         </section>
       </div>
     </main>

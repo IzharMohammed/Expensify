@@ -1,8 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -15,6 +19,11 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { ZodValidationPipe } from '../auth/zod-validation.pipe';
 import { CreateExpenseDto, createExpenseSchema } from './dto/create-expense.dto';
 import { ParseExpenseDto, parseExpenseSchema } from './dto/parse-expense.dto';
+import { SearchExpensesDto, searchExpensesSchema } from './dto/search-expenses.dto';
+import {
+  UpdateExpenseTagsDto,
+  updateExpenseTagsSchema,
+} from './dto/update-expense-tags.dto';
 import { ExpensesService } from './expenses.service';
 
 @Controller('expenses')
@@ -55,5 +64,31 @@ export class ExpensesController {
     return {
       expenses: await this.expensesService.listRecent(user.sub),
     };
+  }
+
+  @Get('search')
+  async search(
+    @CurrentUser() user: JwtPayload,
+    @Query(new ZodValidationPipe(searchExpensesSchema)) query: SearchExpensesDto,
+  ) {
+    return this.expensesService.search(user.sub, query);
+  }
+
+  @Post(':id/tags')
+  async addTags(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', new ParseUUIDPipe()) expenseId: string,
+    @Body(new ZodValidationPipe(updateExpenseTagsSchema)) body: UpdateExpenseTagsDto,
+  ) {
+    return this.expensesService.addTags(user.sub, expenseId, body);
+  }
+
+  @Delete(':id/tags/:tagId')
+  async removeTag(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', new ParseUUIDPipe()) expenseId: string,
+    @Param('tagId', new ParseUUIDPipe()) tagId: string,
+  ) {
+    return this.expensesService.removeTag(user.sub, expenseId, tagId);
   }
 }

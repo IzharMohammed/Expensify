@@ -38,4 +38,10 @@ export type ExpenseRecord = {
   rawInput: string | null;
   receiptUrl: string | null;
   createdAt: string;
+  tags: ExpenseTag[];
+};
+
+export type ExpenseTag = {
+  id: string;
+  name: string;
 };

@@ -57,6 +57,13 @@
       "when": 1784115000000,
       "tag": "0007_notifications_centralized",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784201400000,
+      "tag": "0008_expense_tags_search",
+      "breakpoints": true
     }
   ]
 }

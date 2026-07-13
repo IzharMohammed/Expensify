@@ -10,6 +10,7 @@ import {
   uuid,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const authProviderEnum = pgEnum('auth_provider', ['local', 'google']);
 export const paymentMethodEnum = pgEnum('payment_method', ['upi', 'card', 'cash', 'netbanking']);
@@ -88,6 +89,43 @@ export const expenses = pgTable(
     expensesUserIdIdx: index('expenses_user_id_idx').on(table.userId),
     expensesCategoryIdIdx: index('expenses_category_id_idx').on(table.categoryId),
     expensesDateIdx: index('expenses_date_idx').on(table.date),
+  }),
+);
+
+export const tags = pgTable(
+  'tags',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+  },
+  (table) => ({
+    tagsUserIdIdx: index('tags_user_id_idx').on(table.userId),
+    tagsUserLowerNameUnique: uniqueIndex('tags_user_lower_name_unique').on(
+      table.userId,
+      sql`lower(${table.name})`,
+    ),
+  }),
+);
+
+export const expenseTags = pgTable(
+  'expense_tags',
+  {
+    expenseId: uuid('expense_id')
+      .notNull()
+      .references(() => expenses.id, { onDelete: 'cascade' }),
+    tagId: uuid('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    expenseTagsUnique: uniqueIndex('expense_tags_expense_tag_unique').on(
+      table.expenseId,
+      table.tagId,
+    ),
+    expenseTagsTagIdIdx: index('expense_tags_tag_id_idx').on(table.tagId),
   }),
 );
 
@@ -272,6 +310,9 @@ export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
 export type Expense = typeof expenses.$inferSelect;
 export type NewExpense = typeof expenses.$inferInsert;
+export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
+export type ExpenseTag = typeof expenseTags.$inferSelect;
 export type Budget = typeof budgets.$inferSelect;
 export type NewBudget = typeof budgets.$inferInsert;
 export type MonthlyIncome = typeof monthlyIncome.$inferSelect;
