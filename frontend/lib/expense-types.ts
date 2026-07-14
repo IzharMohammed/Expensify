@@ -28,6 +28,7 @@ export type ExpensePreview = {
 
 export type ExpenseRecord = {
   id: string;
+  householdId: string | null;
   amount: string;
   merchant: string;
   categoryId: string | null;

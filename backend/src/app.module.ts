@@ -13,6 +13,7 @@ import { DrizzleModule } from './database/drizzle.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { GoalsModule } from './goals/goals.module';
+import { HouseholdsModule } from './households/households.module';
 import { InsightsModule } from './insights/insights.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { InsightsQueueService } from './queues/insights-queue.service';
@@ -47,6 +48,7 @@ import { RecurringModule } from './recurring/recurring.module';
     DashboardModule,
     ExpensesModule,
     GoalsModule,
+    HouseholdsModule,
     InsightsModule,
     NotificationsModule,
     RecurringModule,

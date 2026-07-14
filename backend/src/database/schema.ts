@@ -37,6 +37,8 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'no_spend_today',
   'anomaly_alert',
 ]);
+export const householdRoleEnum = pgEnum('household_role', ['owner', 'member']);
+export const settlementStatusEnum = pgEnum('settlement_status', ['pending', 'settled']);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -74,6 +76,41 @@ export const categories = pgTable(
   }),
 );
 
+export const households = pgTable(
+  'households',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    householdsOwnerIdIdx: index('households_owner_id_idx').on(table.ownerId),
+  }),
+);
+
+export const householdMembers = pgTable(
+  'household_members',
+  {
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: householdRoleEnum('role').notNull().default('member'),
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    householdMembersUnique: uniqueIndex('household_members_household_user_unique').on(
+      table.householdId,
+      table.userId,
+    ),
+    householdMembersUserIdIdx: index('household_members_user_id_idx').on(table.userId),
+  }),
+);
+
 export const expenses = pgTable(
   'expenses',
   {
@@ -81,6 +118,7 @@ export const expenses = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    householdId: uuid('household_id').references(() => households.id, { onDelete: 'set null' }),
     amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
     merchant: text('merchant').notNull(),
     categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
@@ -96,6 +134,52 @@ export const expenses = pgTable(
     expensesUserIdIdx: index('expenses_user_id_idx').on(table.userId),
     expensesCategoryIdIdx: index('expenses_category_id_idx').on(table.categoryId),
     expensesDateIdx: index('expenses_date_idx').on(table.date),
+    expensesHouseholdIdIdx: index('expenses_household_id_idx').on(table.householdId),
+  }),
+);
+
+export const expenseSplits = pgTable(
+  'expense_splits',
+  {
+    expenseId: uuid('expense_id')
+      .notNull()
+      .references(() => expenses.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  },
+  (table) => ({
+    expenseSplitsUnique: uniqueIndex('expense_splits_expense_user_unique').on(
+      table.expenseId,
+      table.userId,
+    ),
+    expenseSplitsUserIdIdx: index('expense_splits_user_id_idx').on(table.userId),
+  }),
+);
+
+export const settlements = pgTable(
+  'settlements',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    fromUserId: uuid('from_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    toUserId: uuid('to_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+    status: settlementStatusEnum('status').notNull().default('pending'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    settlementsHouseholdStatusIdx: index('settlements_household_status_idx').on(
+      table.householdId,
+      table.status,
+    ),
   }),
 );
 

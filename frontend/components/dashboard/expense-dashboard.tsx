@@ -19,6 +19,8 @@ import { Category, ExpensePreview, ExpenseRecord } from '@/lib/expense-types';
 
 import { CategoryPicker } from '../expenses/category-picker';
 import { ExpenseSearch } from '../expenses/expense-search';
+import { SharedSplitSelector, SharingDraft } from '../expenses/shared-split-selector';
+import { ExpenseSplitDraft, Household } from '@/lib/household-types';
 
 type DashboardState = {
   categories: Category[];
@@ -46,6 +48,8 @@ export function ExpenseDashboard() {
   });
   const [alerts, setAlerts] = useState<Array<BudgetAlert & { id: string }>>([]);
   const [savedMerchant, setSavedMerchant] = useState<string | null>(null);
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [sharing, setSharing] = useState<SharingDraft>({ householdId: '', mode: 'equal', values: {} });
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -56,10 +60,11 @@ export function ExpenseDashboard() {
 
   async function loadInitialData() {
     try {
-      const [categoriesResponse, expensesResponse, summaryResponse] = await Promise.all([
+      const [categoriesResponse, expensesResponse, summaryResponse, householdsResponse] = await Promise.all([
         api.get('/categories'),
         api.get('/expenses'),
         api.get('/dashboard/summary'),
+        api.get('/households'),
       ]);
 
       setState((current) => ({
@@ -68,6 +73,7 @@ export function ExpenseDashboard() {
         expenses: expensesResponse.data.expenses,
         summary: summaryResponse.data,
       }));
+      setHouseholds(householdsResponse.data.households);
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -141,10 +147,13 @@ export function ExpenseDashboard() {
         source: state.preview.source,
         rawInput: state.preview.rawInput,
         receiptUrl: state.preview.receiptUrl ?? null,
+        householdId: sharing.householdId || null,
+        split: buildSplit(sharing, households),
       });
 
       const expense = response.data.expense as ExpenseRecord;
       setSavedMerchant(expense.merchant);
+      setSharing({ householdId: '', mode: 'equal', values: {} });
       setState((current) => ({
         ...current,
         expenses: [expense, ...current.expenses],
@@ -246,7 +255,8 @@ export function ExpenseDashboard() {
 
   const isBusy = ['parsing', 'saving', 'transcribing', 'scanning'].includes(state.status);
   const canConfirm =
-    !!state.preview?.amount && Number(state.preview.amount) > 0 && !!state.preview.category?.id;
+    !!state.preview?.amount && Number(state.preview.amount) > 0 && !!state.preview.category?.id &&
+    isSplitValid(sharing, households, state.preview?.amount ?? null);
 
   useEffect(() => {
     if (!savedMerchant) return;
@@ -390,13 +400,17 @@ export function ExpenseDashboard() {
               {state.preview ? (
                 <ConfirmationCard
                   categories={state.categories}
+                  households={households}
                   isSaving={state.status === 'saving'}
                   onCancel={() =>
-                    setState((current) => ({
-                      ...current,
-                      preview: null,
-                      status: '',
-                    }))
+                    {
+                      setState((current) => ({
+                        ...current,
+                        preview: null,
+                        status: '',
+                      }));
+                      setSharing({ householdId: '', mode: 'equal', values: {} });
+                    }
                   }
                   onCategoryCreate={createCategory}
                   onCategorySelect={(category) =>
@@ -420,6 +434,8 @@ export function ExpenseDashboard() {
                   }
                   preview={state.preview}
                   canConfirm={canConfirm}
+                  sharing={sharing}
+                  onSharingChange={setSharing}
                 />
               ) : null}
             </CardContent>
@@ -435,6 +451,7 @@ export function ExpenseDashboard() {
 function ConfirmationCard(props: {
   canConfirm: boolean;
   categories: Category[];
+  households: Household[];
   isSaving: boolean;
   onCancel: () => void;
   onCategoryCreate: (name: string) => Promise<Category | null>;
@@ -442,6 +459,8 @@ function ConfirmationCard(props: {
   onConfirm: () => void;
   onPreviewChange: (preview: Partial<ExpensePreview>) => void;
   preview: ExpensePreview;
+  sharing: SharingDraft;
+  onSharingChange: (value: SharingDraft) => void;
 }) {
   const { preview } = props;
 
@@ -512,6 +531,8 @@ function ConfirmationCard(props: {
         onSelect={props.onCategorySelect}
         value={preview.category}
       />
+
+      <SharedSplitSelector amount={preview.amount} disabled={props.isSaving} households={props.households} onChange={props.onSharingChange} value={props.sharing} />
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Note</label>
@@ -597,4 +618,22 @@ function getError(error: unknown, fallback: string) {
   }
 
   return message ?? fallback;
+}
+
+function buildSplit(sharing: SharingDraft, households: Household[]): ExpenseSplitDraft | null {
+  if (!sharing.householdId) return null;
+  const members = households.find((item) => item.id === sharing.householdId)?.members ?? [];
+  if (sharing.mode === 'equal') return { type: 'equal', memberIds: members.map((member) => member.userId) };
+  if (sharing.mode === 'custom') return { type: 'custom', shares: members.map((member) => ({ userId: member.userId, amount: sharing.values[member.userId] ?? '0' })) };
+  return { type: 'percentage', shares: members.map((member) => ({ userId: member.userId, percentage: Number(sharing.values[member.userId] || 0) })) };
+}
+
+function isSplitValid(sharing: SharingDraft, households: Household[], amount: string | null) {
+  if (!sharing.householdId) return true;
+  const members = households.find((item) => item.id === sharing.householdId)?.members ?? [];
+  if (!members.length) return false;
+  if (sharing.mode === 'equal') return true;
+  const total = members.reduce((sum, member) => sum + Number(sharing.values[member.userId] || 0), 0);
+  const expected = sharing.mode === 'percentage' ? 100 : Number(amount || 0);
+  return members.every((member) => sharing.values[member.userId] !== '') && Math.abs(total - expected) < 0.005;
 }

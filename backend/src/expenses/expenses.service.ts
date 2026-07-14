@@ -15,10 +15,11 @@ import {
 import { BudgetsService } from '../budgets/budgets.service';
 import { CategoriesService } from '../categories/categories.service';
 import { DrizzleService } from '../database/drizzle.service';
-import { expenseTags, expenses, tags } from '../database/schema';
+import { expenseSplits, expenseTags, expenses, householdMembers, tags } from '../database/schema';
 import { DashboardEventsService } from '../dashboard/dashboard-events.service';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { HouseholdsService } from '../households/households.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { SearchExpensesDto } from './dto/search-expenses.dto';
@@ -35,6 +36,7 @@ export class ExpensesService {
     private readonly dashboardService: DashboardService,
     private readonly dashboardEventsService: DashboardEventsService,
     private readonly notificationsService: NotificationsService,
+    private readonly householdsService: HouseholdsService,
     private readonly groqService: GroqService,
     private readonly storageService: StorageService,
   ) {}
@@ -79,21 +81,42 @@ export class ExpensesService {
       throw new BadRequestException('Invalid category');
     }
 
-    const [expense] = await this.drizzle.db
-      .insert(expenses)
-      .values({
-        userId,
-        amount: dto.amount,
-        merchant: dto.merchant.trim(),
-        categoryId: category?.id ?? null,
-        paymentMethod: dto.paymentMethod ?? null,
-        date: new Date(dto.date),
-        note: dto.note ?? null,
-        source: dto.source,
-        rawInput: dto.rawInput ?? null,
-        receiptUrl: dto.receiptUrl ?? null,
-      })
-      .returning();
+    const amountCents = this.toCents(dto.amount);
+    if (amountCents <= 0) throw new BadRequestException('Amount must be greater than zero');
+
+    const shares = dto.householdId
+      ? await this.buildHouseholdShares(userId, dto.householdId, dto.split!, amountCents)
+      : [];
+
+    const expense = await this.drizzle.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(expenses)
+        .values({
+          userId,
+          householdId: dto.householdId ?? null,
+          amount: (amountCents / 100).toFixed(2),
+          merchant: dto.merchant.trim(),
+          categoryId: category?.id ?? null,
+          paymentMethod: dto.paymentMethod ?? null,
+          date: new Date(dto.date),
+          note: dto.note ?? null,
+          source: dto.source,
+          rawInput: dto.rawInput ?? null,
+          receiptUrl: dto.receiptUrl ?? null,
+        })
+        .returning();
+
+      if (shares.length) {
+        await tx.insert(expenseSplits).values(
+          shares.map((share) => ({
+            expenseId: created.id,
+            userId: share.userId,
+            amount: (share.amountCents / 100).toFixed(2),
+          })),
+        );
+      }
+      return created;
+    });
 
     const summary = await this.dashboardService.getSummary(userId);
     await this.dashboardEventsService.publish(userId, {
@@ -120,6 +143,78 @@ export class ExpensesService {
     }
 
     return { expense: { ...expense, tags: [] } };
+  }
+
+  private async buildHouseholdShares(
+    userId: string,
+    householdId: string,
+    split: NonNullable<CreateExpenseDto['split']>,
+    amountCents: number,
+  ) {
+    await this.householdsService.requireMember(userId, householdId);
+    const memberRows = await this.drizzle.db
+      .select({ userId: householdMembers.userId })
+      .from(householdMembers)
+      .where(eq(householdMembers.householdId, householdId));
+    const validMembers = new Set(memberRows.map((member) => member.userId));
+    const participantIds =
+      split.type === 'equal' ? split.memberIds : split.shares.map((share) => share.userId);
+
+    if (new Set(participantIds).size !== participantIds.length) {
+      throw new BadRequestException('A household member can only appear once in a split');
+    }
+    if (participantIds.some((id) => !validMembers.has(id))) {
+      throw new BadRequestException('Split contains a user outside this household');
+    }
+
+    if (split.type === 'equal') {
+      const base = Math.floor(amountCents / split.memberIds.length);
+      const remainder = amountCents % split.memberIds.length;
+      return split.memberIds.map((memberId, index) => ({
+        userId: memberId,
+        amountCents: base + (index < remainder ? 1 : 0),
+      }));
+    }
+
+    if (split.type === 'custom') {
+      const shares = split.shares.map((share) => ({
+        userId: share.userId,
+        amountCents: this.toCents(share.amount),
+      }));
+      if (shares.some((share) => share.amountCents < 0)) {
+        throw new BadRequestException('Split amounts cannot be negative');
+      }
+      if (shares.reduce((total, share) => total + share.amountCents, 0) !== amountCents) {
+        throw new BadRequestException('Custom split amounts must equal the expense amount');
+      }
+      return shares;
+    }
+
+    const percentageTotal = split.shares.reduce((total, share) => total + share.percentage, 0);
+    if (Math.abs(percentageTotal - 100) > 0.001) {
+      throw new BadRequestException('Split percentages must add up to 100');
+    }
+    const calculated = split.shares.map((share, index) => {
+      const raw = (amountCents * share.percentage) / 100;
+      return { userId: share.userId, amountCents: Math.floor(raw), remainder: raw % 1, index };
+    });
+    let centsLeft = amountCents - calculated.reduce((total, share) => total + share.amountCents, 0);
+    const remainderOrder = [...calculated].sort(
+      (a, b) => b.remainder - a.remainder || a.index - b.index,
+    );
+    for (let index = 0; index < centsLeft; index += 1) {
+      remainderOrder[index % remainderOrder.length].amountCents += 1;
+    }
+    return calculated.map(({ userId, amountCents: shareAmount }) => ({
+      userId,
+      amountCents: shareAmount,
+    }));
+  }
+
+  private toCents(value: string | number) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) throw new BadRequestException('Invalid amount');
+    return Math.round(parsed * 100);
   }
 
   async parseVoice(userId: string, file: Express.Multer.File) {

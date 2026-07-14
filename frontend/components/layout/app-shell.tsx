@@ -11,6 +11,7 @@ import {
   Menu,
   PiggyBank,
   ReceiptText,
+  Users,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -26,6 +27,7 @@ const links = [
   { href: '/analytics', label: 'Reports', icon: BarChart3 },
   { href: '/budgets', label: 'Budgets', icon: ReceiptText },
   { href: '/goals', label: 'Goals', icon: PiggyBank },
+  { href: '/households', label: 'Households', icon: Users },
   { href: '/recurring', label: 'Recurring', icon: CalendarClock },
   { href: '/insights', label: 'Insights', icon: Lightbulb },
   { href: '/chat', label: 'AI Chat', icon: Bot },

@@ -71,6 +71,13 @@
       "when": 1784287800000,
       "tag": "0009_expense_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784374200000,
+      "tag": "0010_shared_households",
+      "breakpoints": true
     }
   ]
 }
