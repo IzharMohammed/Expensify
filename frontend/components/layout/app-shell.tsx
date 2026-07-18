@@ -60,7 +60,7 @@ export function AppShell({
         <Link className="flex items-center justify-center gap-3 lg:justify-start lg:px-3" href="/">
           <BrandMark />
           <div className="hidden lg:block">
-            <p className="font-display text-xl leading-none">Ledger</p>
+            <p className="font-display text-xl leading-none">Expensify</p>
             <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Personal finance</p>
           </div>
         </Link>
