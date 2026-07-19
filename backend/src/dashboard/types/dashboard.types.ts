@@ -34,4 +34,15 @@ export type DashboardStreamEvent =
         isRead: boolean;
         createdAt: string;
       };
+    }
+  | {
+      type: 'badge_earned';
+      data: {
+        id: string;
+        code: string;
+        name: string;
+        description: string;
+        icon: string;
+        earnedAt: string;
+      };
     };

@@ -13,10 +13,12 @@ import { DrizzleModule } from './database/drizzle.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { GoalsModule } from './goals/goals.module';
+import { GamificationModule } from './gamification/gamification.module';
 import { HouseholdsModule } from './households/households.module';
 import { InsightsModule } from './insights/insights.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { InsightsQueueService } from './queues/insights-queue.service';
+import { GamificationQueueService } from './queues/gamification-queue.service';
 import { NotificationsQueueService } from './queues/notifications-queue.service';
 import { QueueBoardService } from './queues/queue-board.service';
 import { RecurringQueueService } from './queues/recurring-queue.service';
@@ -47,12 +49,19 @@ import { RecurringModule } from './recurring/recurring.module';
     BudgetsModule,
     DashboardModule,
     ExpensesModule,
+    GamificationModule,
     GoalsModule,
     HouseholdsModule,
     InsightsModule,
     NotificationsModule,
     RecurringModule,
   ],
-  providers: [InsightsQueueService, NotificationsQueueService, RecurringQueueService, QueueBoardService],
+  providers: [
+    GamificationQueueService,
+    InsightsQueueService,
+    NotificationsQueueService,
+    RecurringQueueService,
+    QueueBoardService,
+  ],
 })
 export class AppModule {}

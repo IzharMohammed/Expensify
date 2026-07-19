@@ -6,6 +6,7 @@ import { ArrowRight, Check, LoaderCircle, Mic, Paperclip, Sparkles } from 'lucid
 import { useAuth } from '@/components/auth/auth-provider';
 import { BudgetAlertToast } from '@/components/dashboard/budget-alert-toast';
 import { SummaryCards } from '@/components/dashboard/summary-cards';
+import { StreakCard } from '@/components/gamification/streak-card';
 import { InsightsPanel } from '@/components/insights/insights-panel';
 import { AppShell } from '@/components/layout/app-shell';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import { CategoryPicker } from '../expenses/category-picker';
 import { ExpenseSearch } from '../expenses/expense-search';
 import { SharedSplitSelector, SharingDraft } from '../expenses/shared-split-selector';
 import { ExpenseSplitDraft, Household } from '@/lib/household-types';
+import { StreakSummary } from '@/lib/gamification-types';
 
 type DashboardState = {
   categories: Category[];
@@ -50,6 +52,7 @@ export function ExpenseDashboard() {
   const [savedMerchant, setSavedMerchant] = useState<string | null>(null);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [sharing, setSharing] = useState<SharingDraft>({ householdId: '', mode: 'equal', values: {} });
+  const [streak, setStreak] = useState<StreakSummary | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -60,11 +63,12 @@ export function ExpenseDashboard() {
 
   async function loadInitialData() {
     try {
-      const [categoriesResponse, expensesResponse, summaryResponse, householdsResponse] = await Promise.all([
+      const [categoriesResponse, expensesResponse, summaryResponse, householdsResponse, streakResponse] = await Promise.all([
         api.get('/categories'),
         api.get('/expenses'),
         api.get('/dashboard/summary'),
         api.get('/households'),
+        api.get('/gamification/streak'),
       ]);
 
       setState((current) => ({
@@ -74,6 +78,7 @@ export function ExpenseDashboard() {
         summary: summaryResponse.data,
       }));
       setHouseholds(householdsResponse.data.households);
+      setStreak(streakResponse.data);
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -304,6 +309,7 @@ export function ExpenseDashboard() {
     >
       <div className="space-y-6 sm:space-y-8">
         <SummaryCards summary={state.summary} />
+        <StreakCard streak={streak} />
 
         {alerts.length ? (
           <div className="space-y-3">

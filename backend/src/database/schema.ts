@@ -2,6 +2,7 @@ import {
   boolean,
   date as pgDate,
   index,
+  integer,
   numeric,
   pgEnum,
   pgTable,
@@ -282,6 +283,46 @@ export const monthlyIncome = pgTable(
   }),
 );
 
+export const streaks = pgTable('streaks', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  currentStreak: integer('current_streak').notNull().default(0),
+  longestStreak: integer('longest_streak').notNull().default(0),
+  lastQualifyingDate: pgDate('last_qualifying_date', { mode: 'date' }),
+});
+
+export const badges = pgTable('badges', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  code: text('code').notNull().unique(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  icon: text('icon').notNull(),
+});
+
+export const userBadges = pgTable(
+  'user_badges',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    badgeId: uuid('badge_id')
+      .notNull()
+      .references(() => badges.id, { onDelete: 'cascade' }),
+    earnedAt: timestamp('earned_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userBadgesUnique: uniqueIndex('user_badges_user_badge_unique').on(
+      table.userId,
+      table.badgeId,
+    ),
+    userBadgesUserEarnedIdx: index('user_badges_user_earned_idx').on(
+      table.userId,
+      table.earnedAt,
+    ),
+  }),
+);
+
 export const insights = pgTable(
   'insights',
   {
@@ -429,6 +470,9 @@ export type NewAttachment = typeof attachments.$inferInsert;
 export type Budget = typeof budgets.$inferSelect;
 export type NewBudget = typeof budgets.$inferInsert;
 export type MonthlyIncome = typeof monthlyIncome.$inferSelect;
+export type Streak = typeof streaks.$inferSelect;
+export type Badge = typeof badges.$inferSelect;
+export type UserBadge = typeof userBadges.$inferSelect;
 export type Insight = typeof insights.$inferSelect;
 export type NewInsight = typeof insights.$inferInsert;
 export type ChatMessage = typeof chatMessages.$inferSelect;

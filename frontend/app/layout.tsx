@@ -4,6 +4,7 @@ import '@fontsource/dm-serif-display';
 import './globals.css';
 import { AuthProvider } from '@/components/auth/auth-provider';
 import { ThemeProvider } from '@/components/theme/theme-provider';
+import { GamificationEventsProvider } from '@/components/gamification/gamification-events-provider';
 
 export const metadata: Metadata = {
   title: 'Ledger | Personal finance, clearly',
@@ -15,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider><GamificationEventsProvider>{children}</GamificationEventsProvider></AuthProvider>
         </ThemeProvider>
       </body>
     </html>
